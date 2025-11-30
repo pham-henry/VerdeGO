@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: verdego-postgres
+    environment:
+      POSTGRES_DB: verdego
+      POSTGRES_USER: verdego
+      POSTGRES_PASSWORD: verdego
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verdego -d verdego"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - verdego-network
+
+  backend:
+    build:
+      context: ./backend-express
+      dockerfile: Dockerfile
+    container_name: verdego-backend
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://verdego:verdego@postgres:5432/verdego?schema=public
+      JWT_SECRET: change-me-dev-secret-at-least-256-bits
+      JWT_ACCESS_EXP_MIN: 30
+      JWT_REFRESH_EXP_DAYS: 7
+      CORS_ORIGIN: http://localhost:5173
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - verdego-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: verdego-frontend
+    ports:
+      - "5173:80"
+    environment:
+      VITE_API_URL: http://localhost:8080
+      VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
+    depends_on:
+      - backend
+    networks:
+      - verdego-network
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: verdego-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@verdego.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - verdego-network
+    profiles:
+      - dev
+
+networks:
+  verdego-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+

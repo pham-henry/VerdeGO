@@ -1,0 +1,15 @@
+:root {
+  --bg-green: #E8F5E9;
+  --verdego-green: #4CAF50;
+  --verdego-dark: #2E7D32;
+  --bg-blue: #E3F2FD;
+  --bg-default: #E8F5E9;
+}
+
+body {
+  background-color: var(--bg-default);
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+}
+
