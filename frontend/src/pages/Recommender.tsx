@@ -151,7 +151,9 @@ export default function Recommender() {
     let mounted = true
 
     ;(async () => {
-      await loadGoogleMaps(key)
+      if (key) {
+        await loadGoogleMaps(key)
+      }
       if (!mounted || !mapRef.current) return
 
       const g = (window as any).google
@@ -298,9 +300,10 @@ export default function Recommender() {
             prefs: { eco: true, fastest: true, least_transfers: true }
           }
 
-      const data = await recommendRoute(payload as any)
-      if (!data || ((Array.isArray(data) && data.length === 0) || (!Array.isArray(data) && !data.options))) {
+      const data = await recommendRoute(payload as any) as { options?: Option[] } | null
+      if (!data || ((Array.isArray(data) && data.length === 0) || (!Array.isArray(data) && !data?.options))) {
         setErrorMsg('No route options returned. Try different locations or check the backend.')
+        return
       }
       setResp(data)
     } catch (err: any) {

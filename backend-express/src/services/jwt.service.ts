@@ -18,22 +18,22 @@ export class JwtService {
 
   generateAccessToken(email: string): string {
     const payload: TokenPayload = { email };
-    const expiresIn = `${this.accessExpirationMinutes}m`;
+    const expiresIn: string | number = `${this.accessExpirationMinutes}m`;
 
     return jwt.sign(payload, this.secret, {
       expiresIn,
       issuer: 'verdego-api',
-    });
+    } as jwt.SignOptions);
   }
 
   generateRefreshToken(email: string): string {
     const payload: TokenPayload = { email };
-    const expiresIn = `${this.refreshExpirationDays}d`;
+    const expiresIn: string | number = `${this.refreshExpirationDays}d`;
 
     return jwt.sign(payload, this.secret, {
       expiresIn,
       issuer: 'verdego-api',
-    });
+    } as jwt.SignOptions);
   }
 
   getEmailFromToken(token: string): string {

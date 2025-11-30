@@ -1,6 +1,6 @@
 import { prisma } from '../config/database';
 import { userService } from './user.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, Commute } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 export interface CreateCommuteInput {
@@ -76,13 +76,16 @@ export class CommuteService {
       userId: user.id,
     };
 
-    if (from) {
-      where.date = { ...where.date, gte: new Date(from) };
-    }
-    if (to) {
-      const toDate = new Date(to);
-      toDate.setHours(23, 59, 59, 999);
-      where.date = { ...where.date, lte: toDate };
+    if (from || to) {
+      where.date = {};
+      if (from) {
+        where.date.gte = new Date(from);
+      }
+      if (to) {
+        const toDate = new Date(to);
+        toDate.setHours(23, 59, 59, 999);
+        where.date.lte = toDate;
+      }
     }
 
     const commutes = await prisma.commute.findMany({
@@ -90,7 +93,7 @@ export class CommuteService {
       orderBy: [{ date: 'desc' }, { id: 'desc' }],
     });
 
-    return commutes.map((c) => ({
+    return commutes.map((c: Commute) => ({
       id: c.id,
       user_email: user.email,
       date: c.date.toISOString().slice(0, 10),

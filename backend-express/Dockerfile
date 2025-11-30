@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine AS build
 
+# Install OpenSSL and other required libraries for Prisma
+RUN apk add --no-cache openssl openssl-dev libc6-compat
+
 WORKDIR /app
 
 # Copy package files
@@ -22,6 +25,9 @@ RUN npm run build
 
 # Production stage
 FROM node:20-alpine
+
+# Install OpenSSL and other required libraries for Prisma
+RUN apk add --no-cache openssl openssl-dev libc6-compat
 
 WORKDIR /app
 
