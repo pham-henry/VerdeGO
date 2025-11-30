@@ -7,6 +7,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
+// GET /api/emissions/summary
 router.get(
   '/emissions/summary',
   validate([

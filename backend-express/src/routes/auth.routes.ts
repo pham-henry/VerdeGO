@@ -6,6 +6,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
+// POST /api/auth/register
 router.post(
   '/register',
   validate([
@@ -28,6 +29,7 @@ router.post(
   })
 );
 
+// POST /api/auth/login
 router.post(
   '/login',
   validate([
@@ -44,6 +46,7 @@ router.post(
   })
 );
 
+// POST /api/auth/refresh
 router.post(
   '/refresh',
   validate([

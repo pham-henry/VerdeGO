@@ -7,6 +7,7 @@ import { NotFoundError } from '../errors/NotFoundError';
 
 const router = Router();
 
+// POST /api/commutes
 router.post(
   '/commutes',
   validate([
@@ -23,6 +24,7 @@ router.post(
   })
 );
 
+// GET /api/commutes
 router.get(
   '/commutes',
   validate([
@@ -41,6 +43,7 @@ router.get(
   })
 );
 
+// DELETE /api/commutes/:id
 router.delete(
   '/commutes/:id',
   validate([

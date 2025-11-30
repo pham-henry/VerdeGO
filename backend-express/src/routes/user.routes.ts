@@ -6,6 +6,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
+// GET /api/me
 router.get(
   '/me',
   authenticateToken,

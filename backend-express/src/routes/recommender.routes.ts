@@ -6,6 +6,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
+// POST /api/recommend
 router.post(
   '/recommend',
   validate([
