@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { emissionSummaryByDay, listCommutes } from '../lib/api'
 
-const defaultEmail = 'demo@user'
+const defaultEmail = 'demo@user.com'
 
 // ---- Goal Storage ----
 const GOAL_STORAGE_KEY = (email: string) => `verdego:goals:${email}`
