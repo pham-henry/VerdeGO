@@ -11,7 +11,7 @@ import {
   LineChart, Line, XAxis, YAxis
 } from 'recharts'
 
-const defaultEmail = 'demo@user'
+const defaultEmail = 'demo@user.com'
 
 // emitting modes palette
 const MODE_COLORS: Record<string, string> = {
@@ -90,9 +90,6 @@ export default function Tracker() {
       .catch((e) => {
         console.error('Prefetch failed:', e)
       })
-      .finally(() => {
-        // overlay hide is handled by the effect below based on active view readiness
-      })
 
     return () => {
       cancelled = true
@@ -132,6 +129,7 @@ export default function Tracker() {
 
   const emissionsReady = emissionsLoaded
   const zeroReady = zeroLoaded
+  const activeReady = showZeroView ? zeroReady : emissionsReady
 
   // Toggle view: show overlay only if target isn't already ready
   function onToggleZeroView(checked: boolean) {
@@ -142,7 +140,7 @@ export default function Tracker() {
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', minHeight: 400 }}>
       {/* buffering overlay */}
       {overlayVisible && (
         <div style={overlayStyle}>
@@ -153,117 +151,122 @@ export default function Tracker() {
 
       <h2>Carbon Footprint Tracker</h2>
 
-      {/* View switch */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', margin: '8px 0 16px' }}>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <input
-            type="checkbox"
-            checked={showZeroView}
-            onChange={(e) => onToggleZeroView(e.target.checked)}
-          />
-          Show zero-emission distance view
-        </label>
-      </div>
-
-      {!showZeroView ? (
+      {/* Only render the rest once the active view's data is ready */}
+      {activeReady && (
         <>
-          <p>
-            Total emissions from your logged commutes:&nbsp;
-            <b>{total.toFixed(2)} kg CO₂e</b>
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-            {/* Emissions by mode (pie) */}
-            <div style={{ height: 300 }}>
-              <h3>By Mode (excluding zero-emission)</h3>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={byMode}
-                    dataKey="value"
-                    nameKey="label"
-                    outerRadius={90}
-                    labelLine={false}
-                    label={false}
-                  >
-                    {byMode.map((entry, idx) => {
-                      const color = MODE_COLORS[entry.label] || MODE_COLORS.other
-                      return <Cell key={`cell-${idx}`} fill={color} />
-                    })}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Emissions daily trend */}
-            <div style={{ height: 300 }}>
-              <h3>Daily Emissions Trend</h3>
-              <ResponsiveContainer>
-                <LineChart data={byDay}>
-                  <XAxis dataKey="label" hide />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="value" stroke="#4CAF50" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+          {/* View switch */}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', margin: '8px 0 16px' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={showZeroView}
+                onChange={(e) => onToggleZeroView(e.target.checked)}
+              />
+              Show zero-emission distance view
+            </label>
           </div>
 
-          {/* Emissions table */}
-          <div style={{ marginTop: 60 }}>
-            <h3>Emission Breakdown by Mode</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f3f3f3', borderBottom: '2px solid #ccc' }}>
-                  <th style={{ textAlign: 'left', padding: '10px 12px' }}>Mode</th>
-                  <th style={{ textAlign: 'right', padding: '10px 12px' }}>Emissions (kg CO₂e)</th>
-                  <th style={{ textAlign: 'right', padding: '10px 12px' }}>Share of Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {byMode.map((m, i) => {
-                  const pct = total > 0 ? (m.value / total) * 100 : 0
-                  const color = MODE_COLORS[m.label] || MODE_COLORS.other
-                  return (
-                    <tr key={i} style={{ borderTop: '1px solid #ddd' }}>
-                      <td style={{ padding: '8px 12px', color }}>{m.label}</td>
-                      <td style={{ textAlign: 'right', padding: '8px 12px' }}>{m.value.toFixed(3)}</td>
-                      <td style={{ textAlign: 'right', padding: '8px 12px' }}>{pct.toFixed(1)}%</td>
+          {!showZeroView ? (
+            <>
+              <p>
+                Total emissions from your logged commutes:&nbsp;
+                <b>{total.toFixed(2)} kg CO₂e</b>
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                {/* Emissions by mode (pie) */}
+                <div style={{ height: 300 }}>
+                  <h3>By Mode (excluding zero-emission)</h3>
+                  <ResponsiveContainer>
+                    <PieChart>
+                      <Pie
+                        data={byMode}
+                        dataKey="value"
+                        nameKey="label"
+                        outerRadius={90}
+                        labelLine={false}
+                        label={false}
+                      >
+                        {byMode.map((entry, idx) => {
+                          const color = MODE_COLORS[entry.label] || MODE_COLORS.other
+                          return <Cell key={`cell-${idx}`} fill={color} />
+                        })}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Emissions daily trend */}
+                <div style={{ height: 300 }}>
+                  <h3>Daily Emissions Trend</h3>
+                  <ResponsiveContainer>
+                    <LineChart data={byDay}>
+                      <XAxis dataKey="label" hide />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="value" stroke="#4CAF50" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Emissions table */}
+              <div style={{ marginTop: 60 }}>
+                <h3>Emission Breakdown by Mode</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f3f3f3', borderBottom: '2px solid #ccc' }}>
+                      <th style={{ textAlign: 'left', padding: '10px 12px' }}>Mode</th>
+                      <th style={{ textAlign: 'right', padding: '10px 12px' }}>Emissions (kg CO₂e)</th>
+                      <th style={{ textAlign: 'right', padding: '10px 12px' }}>Share of Total</th>
                     </tr>
-                  )
-                })}
-                {byMode.length === 0 && (
-                  <tr>
-                    <td colSpan={3} style={{ textAlign: 'center', padding: 12, opacity: .6 }}>
-                      No emission data yet — all your commutes are zero-emission 🌱
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
-      ) : (
-        /* Zero-emission distance view */
-        <>
-          <p>
-            Total <b>zero-emission distance</b> (walk + bike):&nbsp;
-            <b>{zeroDistance.totalKm.toFixed(2)} km</b>
-          </p>
+                  </thead>
+                  <tbody>
+                    {byMode.map((m, i) => {
+                      const pct = total > 0 ? (m.value / total) * 100 : 0
+                      const color = MODE_COLORS[m.label] || MODE_COLORS.other
+                      return (
+                        <tr key={i} style={{ borderTop: '1px solid #ddd' }}>
+                          <td style={{ padding: '8px 12px', color }}>{m.label}</td>
+                          <td style={{ textAlign: 'right', padding: '8px 12px' }}>{m.value.toFixed(3)}</td>
+                          <td style={{ textAlign: 'right', padding: '8px 12px' }}>{pct.toFixed(1)}%</td>
+                        </tr>
+                      )
+                    })}
+                    {byMode.length === 0 && (
+                      <tr>
+                        <td colSpan={3} style={{ textAlign: 'center', padding: 12, opacity: .6 }}>
+                          No emission data yet — all your commutes are zero-emission 🌱
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            /* Zero-emission distance view */
+            <>
+              <p>
+                Total <b>zero-emission distance</b> (walk + bike):&nbsp;
+                <b>{zeroDistance.totalKm.toFixed(2)} km</b>
+              </p>
 
-          <div style={{ height: 340 }}>
-            <h3>Zero-Emission Distance by Day</h3>
-            <ResponsiveContainer>
-              <LineChart data={zeroDistance.series}>
-                <XAxis dataKey="label" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="#2E7D32" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+              <div style={{ height: 340 }}>
+                <h3>Zero-Emission Distance by Day</h3>
+                <ResponsiveContainer>
+                  <LineChart data={zeroDistance.series}>
+                    <XAxis dataKey="label" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="value" stroke="#2E7D32" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
@@ -274,12 +277,12 @@ export default function Tracker() {
 const overlayStyle: React.CSSProperties = {
   position: 'absolute',
   inset: 0,
-  background: 'rgba(255,255,255,0.75)',
+  background:'#E8F5E9',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  zIndex: 10
+  zIndex: 20
 }
 
 const spinnerStyle: React.CSSProperties = {
@@ -297,4 +300,3 @@ if (styleEl && !document.getElementById('verdego-spin-style')) {
   styleEl.textContent = `@keyframes verdego-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`
   document.head.appendChild(styleEl)
 }
-

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createCommute, listCommutes, deleteCommute, Commute } from '../lib/api'
 
-const defaultEmail = 'demo@user'
+const defaultEmail = 'demo@user.com'
 
 export default function Logger() {
   const [form, setForm] = useState<Commute>({

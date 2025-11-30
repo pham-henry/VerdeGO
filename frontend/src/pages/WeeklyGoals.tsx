@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
-const defaultEmail = 'demo@user'
+const defaultEmail = 'demo@user.com'
 const GOAL_STORAGE_KEY = (email: string) => `verdego:goals:${email}`
 
 type WeeklyGoals = {
