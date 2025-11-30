@@ -89,7 +89,7 @@ echo -e "${BLUE}----------------------------------------${NC}\n"
 backend_running=false
 frontend_running=false
 
-if check_service "$BACKEND_URL/api/commutes" "Backend API"; then
+if check_service "$BACKEND_URL/api/commutes?user_email=test@example.com" "Backend API"; then
     backend_running=true
 fi
 

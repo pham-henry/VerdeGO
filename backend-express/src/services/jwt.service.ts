@@ -18,22 +18,26 @@ export class JwtService {
 
   generateAccessToken(email: string): string {
     const payload: TokenPayload = { email };
-    const expiresIn: string | number = `${this.accessExpirationMinutes}m`;
-
-    return jwt.sign(payload, this.secret, {
-      expiresIn,
-      issuer: 'verdego-api',
-    } as jwt.SignOptions);
+    return jwt.sign(
+      payload,
+      this.secret,
+      {
+        expiresIn: `${this.accessExpirationMinutes}m`,
+        issuer: 'verdego-api',
+      } as jwt.SignOptions
+    ) as string;
   }
 
   generateRefreshToken(email: string): string {
     const payload: TokenPayload = { email };
-    const expiresIn: string | number = `${this.refreshExpirationDays}d`;
-
-    return jwt.sign(payload, this.secret, {
-      expiresIn,
-      issuer: 'verdego-api',
-    } as jwt.SignOptions);
+    return jwt.sign(
+      payload,
+      this.secret,
+      {
+        expiresIn: `${this.refreshExpirationDays}d`,
+        issuer: 'verdego-api',
+      } as jwt.SignOptions
+    ) as string;
   }
 
   getEmailFromToken(token: string): string {
