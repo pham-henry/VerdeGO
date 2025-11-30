@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: verdego-postgres
+    environment:
+      POSTGRES_DB: verdego
+      POSTGRES_USER: verdego
+      POSTGRES_PASSWORD: verdego
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verdego -d verdego"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - verdego-network
+
+  verdego-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: verdego-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/verdego
+      SPRING_DATASOURCE_USERNAME: verdego
+      SPRING_DATASOURCE_PASSWORD: verdego
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - verdego-network
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: verdego-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@verdego.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - verdego-network
+    profiles:
+      - dev
+
+networks:
+  verdego-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
