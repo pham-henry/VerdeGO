@@ -78,7 +78,6 @@ function costUSD(mode: string, distance_km: number): number {
 
 function detectMode(opt: Option): string {
   const s = `${opt.mode ?? ''} ${opt.summary ?? ''}`.toLowerCase()
-  // train prioritized before bike for mixed "bike + light rail"
   if (s.includes('walk')) return 'walk'
   if (s.includes('light rail') || s.includes('train')) return 'train'
   if (s.includes('bike')) return 'bike'
@@ -115,19 +114,40 @@ function rankAscending(items: number[]): number[] {
   return ranks
 }
 
-/* -------- Google Maps loader (no status banner) -------- */
-function loadGoogleMaps(apiKey: string): Promise<void> {
-  if ((window as any)._gmapsLoaded) return Promise.resolve()
-  return new Promise((resolve, reject) => {
-    ;(window as any)._gmapsLoaded = true
+/* -------- Google Maps loader (safe) -------- */
+function loadGoogleMaps(apiKey?: string): Promise<boolean> {
+  if (typeof window === 'undefined') return Promise.resolve(false)
+  if ((window as any).google?.maps) return Promise.resolve(true)
+  if (!apiKey) return Promise.resolve(false)
+
+  return new Promise((resolve) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[data-gmaps="1"]')
+    if (existing) {
+      existing.addEventListener(
+        'load',
+        () => resolve(!!(window as any).google?.maps),
+        { once: true }
+      )
+      existing.addEventListener('error', () => resolve(false), { once: true })
+      return
+    }
+
     const s = document.createElement('script')
+    s.dataset.gmaps = '1'
     s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
     s.async = true
     s.defer = true
-    s.onload = () => resolve()
-    s.onerror = reject
+    s.onload = () => resolve(!!(window as any).google?.maps)
+    s.onerror = () => resolve(false)
     document.head.appendChild(s)
   })
+}
+
+function getGoogle() {
+  if (typeof window === 'undefined') return null
+  const g = (window as any).google
+  if (!g || !g.maps) return null
+  return g
 }
 
 /* ================= Component ================= */
@@ -147,18 +167,30 @@ export default function Recommender() {
   const destInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
     let mounted = true
 
     ;(async () => {
-      if (key) {
-        await loadGoogleMaps(key)
-      }
-      if (!mounted || !mapRef.current) return
+      const ok = await loadGoogleMaps(key)
 
-      const g = (window as any).google
+      if (!mounted) return
+      if (!ok || !mapRef.current) {
+        setErrorMsg('Google Maps failed to load. Check your API key or network.')
+        return
+      }
+
+      const g = getGoogle()
+      if (!g) {
+        setErrorMsg('Google Maps is not available on window.google.')
+        return
+      }
+
       const center = { lat: 37.3352, lng: -121.8811 } // SJSU
-      mapObj.current = new g.maps.Map(mapRef.current, { center, zoom: 11, gestureHandling: 'greedy' })
+      mapObj.current = new g.maps.Map(mapRef.current, {
+        center,
+        zoom: 11,
+        gestureHandling: 'greedy'
+      })
 
       polylineRef.current = new g.maps.Polyline({
         path: [],
@@ -167,8 +199,8 @@ export default function Recommender() {
         map: mapObj.current
       })
 
-      // Autocomplete
-      if (originInputRef.current) {
+      // Autocomplete (if places library is available)
+      if (originInputRef.current && g.maps.places) {
         const ac = new g.maps.places.Autocomplete(originInputRef.current)
         ac.addListener('place_changed', () => {
           const p = ac.getPlace()
@@ -176,7 +208,8 @@ export default function Recommender() {
           if (p?.geometry?.location) setMarker('origin', p.geometry.location)
         })
       }
-      if (destInputRef.current) {
+
+      if (destInputRef.current && g.maps.places) {
         const ac2 = new g.maps.places.Autocomplete(destInputRef.current)
         ac2.addListener('place_changed', () => {
           const p = ac2.getPlace()
@@ -201,8 +234,8 @@ export default function Recommender() {
     return () => { mounted = false }
   }, [])
 
-  function bindMarkerDrag(kind: 'origin'|'destination'): void {
-    const g = (window as any).google
+  function bindMarkerDrag(kind: 'origin' | 'destination'): void {
+    const g = getGoogle()
     const m = markers.current[kind]
     if (!g || !m) return
     m.addListener('dragend', () => {
@@ -212,11 +245,10 @@ export default function Recommender() {
     })
   }
 
-  function setMarker(kind: 'origin'|'destination', latLng: any, updateText = false): void {
-    const g = (window as any).google
+  function setMarker(kind: 'origin' | 'destination', latLng: any, updateText = false): void {
+    const g = getGoogle()
     if (!g || !mapObj.current) return
 
-    // remove existing marker of that kind
     if (markers.current[kind]) markers.current[kind].setMap(null)
 
     const icon = kind === 'destination'
@@ -239,7 +271,7 @@ export default function Recommender() {
   }
 
   function drawPolyline(): void {
-    const g = (window as any).google
+    const g = getGoogle()
     if (!g || !polylineRef.current) return
     const o = markers.current.origin?.getPosition?.()
     const d = markers.current.destination?.getPosition?.()
@@ -254,7 +286,7 @@ export default function Recommender() {
   }
 
   function reverseGeocode(latLng: any, setText: (s: string) => void): void {
-    const g = (window as any).google
+    const g = getGoogle()
     if (!g) return
     const geocoder = new g.maps.Geocoder()
     geocoder.geocode({ location: latLng }, (results: any, status: any) => {
@@ -266,7 +298,7 @@ export default function Recommender() {
     setOrigin(prev => {
       const newOrigin = destination
       setDestination(prev)
-      const g = (window as any).google
+      const g = getGoogle()
       if (g && mapObj.current) {
         const oPos = markers.current.origin?.getPosition?.()
         const dPos = markers.current.destination?.getPosition?.()
@@ -278,6 +310,27 @@ export default function Recommender() {
       }
       return newOrigin
     })
+  }
+
+  function clearAll(): void {
+    setOrigin('')
+    setDestination('')
+    setResp(null)
+    setErrorMsg(null)
+
+    const g = (window as any).google
+    if (g && mapObj.current) {
+      if (markers.current.origin) {
+        markers.current.origin.setMap(null)
+      }
+      if (markers.current.destination) {
+        markers.current.destination.setMap(null)
+      }
+      markers.current = {}
+    }
+    if (polylineRef.current) {
+      polylineRef.current.setPath([])
+    }
   }
 
   async function run(): Promise<void> {
@@ -377,6 +430,11 @@ export default function Recommender() {
         <button onClick={run} disabled={loading} style={{ alignSelf: 'end', height: 36 }}>
           {loading ? 'Recommending…' : 'Recommend'}
         </button>
+         <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+          <button onClick={clearAll} style={{ alignSelf: 'end', height: 36 }}>
+            Clear
+          </button>
+        </div>
       </div>
 
       {errorMsg && <div style={{ marginTop: 8, color: '#b00020' }}>{errorMsg}</div>}
@@ -421,4 +479,3 @@ export default function Recommender() {
     </div>
   )
 }
-

@@ -15,7 +15,16 @@ RUN npm ci
 # Copy source code
 COPY src ./src
 
-# Build application
+# ---- Vite build-time env vars ----
+# These ARGs will be provided by docker-compose
+ARG VITE_API_URL
+ARG VITE_GOOGLE_MAPS_API_KEY
+
+# Expose them as ENV so npm run build sees them
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+
+# Build application (Vite will inline VITE_* into the bundle)
 RUN npm run build
 
 # Production stage
@@ -31,4 +40,3 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
-
