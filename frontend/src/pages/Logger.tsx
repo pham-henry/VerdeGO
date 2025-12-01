@@ -41,7 +41,7 @@ export default function Logger() {
   }
 
   async function remove(id: number | string) {
-    await deleteCommute(id)
+    await deleteCommute(id, defaultEmail)
     await load()
   }
 

@@ -74,15 +74,26 @@ export async function createCommute(c: Commute, opts: FetchOpts = {}) {
   }, opts)
 }
 
+export async function deleteCommute(
+  id: string | number,
+  user_email: string,
+  opts: FetchOpts = {}
+) {
+  return fetchJSON(
+    `${API}/api/commutes/${id}?user_email=${encodeURIComponent(user_email)}`,
+    {
+      method: 'DELETE'
+    },
+    opts
+  )
+}
+
+
 type ListParams = { user_email: string, from?: string, to?: string }
 export async function listCommutes(params: ListParams, opts: FetchOpts = {}) {
   const from = params.from ?? daysAgoISO(60)
   const to = params.to ?? todayISO()
   return fetchJSON<Commute[]>(`${API}/api/commutes${qs({ ...params, from, to })}`, {}, opts)
-}
-
-export async function deleteCommute(id: number | string, opts: FetchOpts = {}) {
-  return fetchJSON(`${API}/api/commutes/${id}?user_email=demo@user`, { method: 'DELETE' }, opts)
 }
 
 type SummaryBase = { user_email: string, from?: string, to?: string }
