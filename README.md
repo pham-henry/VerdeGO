@@ -70,6 +70,7 @@ A full-stack application for tracking daily commutes and carbon footprint, built
    ```bash
    cp .env.example .env
    # Edit .env with your settings
+   # use `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` to generate hash
    ```
 
 5. **Run migrations:**
