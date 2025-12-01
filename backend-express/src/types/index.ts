@@ -16,9 +16,11 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   email: string;
+  name?: string | null;
 }
 
 export interface RegisterRequest {
+  name: string;
   email: string;
   password: string;
 }

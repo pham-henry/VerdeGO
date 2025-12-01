@@ -18,6 +18,7 @@ enum Role {
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique @db.VarChar(150)
+  name         String?  @db.VarChar(150)        
   passwordHash String   @map("password_hash") @db.VarChar(255)
   roles        Role[]   @default([USER])
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -46,5 +47,3 @@ model Commute {
   @@index([date])
   @@map("commutes")
 }
-
-

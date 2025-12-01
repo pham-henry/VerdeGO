@@ -102,17 +102,30 @@ export default function Tracker() {
   const zeroDistance = useMemo(() => {
     let totalKm = 0
     const bucket: Record<string, number> = {}
+
     for (const r of commutes) {
       if (!ZERO_EMISSION_MODES.includes(r.mode)) continue
-      const d = String(r.date)
+
+      // ✅ normalize to date-only so multiple trips on the same day are grouped
+      const d = (() => {
+        try {
+          return new Date(r.date).toISOString().slice(0, 10) // "YYYY-MM-DD"
+        } catch {
+          return String(r.date).slice(0, 10)
+        }
+      })()
+
       const km = Number(r.distance_km || 0)
       if (!Number.isFinite(km) || km <= 0) continue
+
       totalKm += km
       bucket[d] = (bucket[d] ?? 0) + km
     }
+
     const series: SeriesPoint[] = Object.entries(bucket)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([label, value]) => ({ label, value: Number(value.toFixed(3)) }))
+
     return { totalKm: Number(totalKm.toFixed(3)), series }
   }, [commutes])
 
