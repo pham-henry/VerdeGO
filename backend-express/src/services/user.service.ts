@@ -1,7 +1,10 @@
+// backend-express/src/services/user.service.ts
 import { prisma } from '../config/database';
 import { Role } from '../types';
 import { User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { NotFoundError } from '../errors/NotFoundError';
+import { UnauthorizedError } from '../errors/UnauthorizedError';
 
 export class UserService {
   /**
@@ -17,7 +20,7 @@ export class UserService {
 
     return prisma.user.create({
       data: {
-        name,          // <-- NEW
+        name,           // <-- NEW
         email,
         passwordHash,
         roles,
@@ -25,18 +28,13 @@ export class UserService {
     });
   }
 
-  /**
-   * Find user by email.
-   */
+  /** Find by email. */
   async findByEmail(email: string): Promise<User | null> {
     return prisma.user.findUnique({
       where: { email },
     });
   }
 
-  /**
-   * Check if user exists by email.
-   */
   async existsByEmail(email: string): Promise<boolean> {
     const user = await prisma.user.findUnique({
       where: { email },
@@ -45,20 +43,51 @@ export class UserService {
     return !!user;
   }
 
-  /**
-   * Find user by ID.
-   */
   async findById(id: string): Promise<User | null> {
     return prisma.user.findUnique({
       where: { id },
     });
   }
 
-  /**
-   * Check password validity.
-   */
   async verifyPassword(password: string, passwordHash: string): Promise<boolean> {
     return bcrypt.compare(password, passwordHash);
+  }
+
+  /** Update profile fields (currently just name) by email. */
+  async updateProfileByEmail(
+    email: string,
+    data: { name?: string }
+  ): Promise<User> {
+    const user = await prisma.user.update({
+      where: { email },
+      data,
+    });
+    return user;
+  }
+
+  /** Change password, verifying current password first. */
+  async changePasswordByEmail(
+    email: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void> {
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!ok) {
+      throw new UnauthorizedError('Current password is incorrect');
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: newHash },
+    });
   }
 }
 
