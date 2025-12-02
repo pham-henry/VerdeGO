@@ -82,8 +82,8 @@ export default function Home() {
     setLoading(true)
 
     Promise.all([
-      emissionSummaryByDay({ user_email: userEmail, from, to }),
-      listCommutes({ user_email: userEmail, from, to })
+      emissionSummaryByDay({ from, to }),
+      listCommutes({ from, to })
     ])
       .then(([emRes, commuteRes]) => {
         if (cancelled) return
@@ -113,7 +113,7 @@ export default function Home() {
     }
 
     let cancelled = false
-    getWeeklyGoals(userEmail)
+    getWeeklyGoals()
       .then(resp => {
         if (cancelled) return
         const normalized = normalizeGoalResponse(resp)

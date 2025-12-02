@@ -11,17 +11,20 @@ const router = Router();
 router.get(
   '/emissions/summary',
   validate([
-    query('user_email').isEmail().withMessage('Valid email is required'),
     query('groupBy').optional().isIn(['day', 'week', 'mode']),
     query('from').optional().isISO8601(),
     query('to').optional().isISO8601(),
   ]),
   asyncHandler(async (req: Request, res: Response) => {
-    const { user_email, groupBy = 'day', from, to } = req.query;
+    const email = req.user?.email;
+    if (!email) {
+      throw new Error('User email not found in token');
+    }
+    const { groupBy = 'day', from, to } = req.query;
 
-    // Get commutes for the user
+    // Get commutes for the authenticated user
     const commutes = await commuteService.listCommutes(
-      user_email as string,
+      email,
       from as string | undefined,
       to as string | undefined
     );

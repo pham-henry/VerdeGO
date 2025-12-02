@@ -69,7 +69,7 @@ export default function WeeklyGoals() {
     setLoading(true)
     setError(null)
 
-    getWeeklyGoals(userEmail)
+    getWeeklyGoals()
       .then(resp => {
         if (cancelled) return
         const normalized = normalizeGoalResponse(resp)
@@ -107,7 +107,6 @@ export default function WeeklyGoals() {
     setError(null)
     try {
       const resp = await saveWeeklyGoals({
-        user_email: userEmail,
         weeklyZeroKm: next.weeklyZeroKm,
         weeklyEmissionCapKg: next.weeklyEmissionCapKg,
         weeklyCommuteCount: next.weeklyCommuteCount
@@ -139,7 +138,7 @@ export default function WeeklyGoals() {
     setSaving(true)
     setError(null)
     try {
-      const resp = await resetWeeklyGoals(userEmail)
+      const resp = await resetWeeklyGoals()
       const normalized = normalizeGoalResponse(resp)
       setGoals(normalized)
       saveGoals(userEmail, normalized)

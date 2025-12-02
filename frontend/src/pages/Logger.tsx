@@ -1,11 +1,12 @@
 import { useEffect, useState, CSSProperties } from 'react'
 import { createCommute, listCommutes, deleteCommute, Commute } from '../lib/api'
-
-const emailFromStorage = localStorage.getItem('email') || ''
+import { useAuth } from '../context/AuthContext'
 
 export default function Logger() {
-  const [form, setForm] = useState<Commute>({
-    user_email: emailFromStorage,
+  const { user } = useAuth()
+  const userEmail = user?.email || ''
+
+  const [form, setForm] = useState<Omit<Commute, 'user_email'>>({
     date: new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/Los_Angeles"
     }).format(new Date()),   // <-- PST date (YYYY-MM-DD)
@@ -22,7 +23,11 @@ export default function Logger() {
   const PAGE_SIZE = 7
 
   const load = async () => {
-    const data = await listCommutes({ user_email: emailFromStorage })
+    if (!userEmail) {
+      setAllRows([])
+      return
+    }
+    const data = await listCommutes()
     if (Array.isArray(data)) {
       // Sort newest → oldest once, keep for both views
       const sorted = [...data].sort(
@@ -34,16 +39,18 @@ export default function Logger() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [userEmail])
 
   async function submit(e: any) {
     e.preventDefault()
+    if (!userEmail) return
     await createCommute(form)
     await load()
   }
 
   async function remove(id: number | string) {
-    await deleteCommute(id, emailFromStorage)
+    if (!userEmail) return
+    await deleteCommute(id)
     await load()
   }
 

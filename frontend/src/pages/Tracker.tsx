@@ -10,8 +10,7 @@ import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis
 } from 'recharts'
-
-const emailFromStorage = localStorage.getItem('email') || ''
+import { useAuth } from '../context/AuthContext'
 
 // emitting modes palette
 const MODE_COLORS: Record<string, string> = {
@@ -27,6 +26,9 @@ const ZERO_EMISSION_MODES = ['walk', 'bike']
 type SeriesPoint = { label: string; value: number }
 
 export default function Tracker() {
+  const { user } = useAuth()
+  const userEmail = user?.email || ''
+
   const [byMode, setByMode] = useState<{ label: string; value: number }[]>([])
   const [byDay, setByDay] = useState<SeriesPoint[]>([])
   const [total, setTotal] = useState(0)
@@ -50,13 +52,24 @@ export default function Tracker() {
 
   // prefetch everything in parallel on mount (timeouts/abort handled in API layer)
   useEffect(() => {
+    if (!userEmail) {
+      setByMode([])
+      setByDay([])
+      setCommutes([])
+      setEmissionsLoaded(true)
+      setZeroLoaded(true)
+      return
+    }
+
     const ctrl = new AbortController()
     let cancelled = false
     setOverlayVisible(true)
+    setEmissionsLoaded(false)
+    setZeroLoaded(false)
 
-    const pMode = emissionSummaryByMode({ user_email: emailFromStorage }, { signal: ctrl.signal })
-    const pDay  = emissionSummaryByDay({ user_email: emailFromStorage }, { signal: ctrl.signal })
-    const pComm = listCommutes({ user_email: emailFromStorage }, { signal: ctrl.signal })
+    const pMode = emissionSummaryByMode({}, { signal: ctrl.signal })
+    const pDay  = emissionSummaryByDay({}, { signal: ctrl.signal })
+    const pComm = listCommutes({}, { signal: ctrl.signal })
 
     Promise.allSettled([pMode, pDay, pComm])
       .then(([modeRes, dayRes, commuteRes]) => {
@@ -95,7 +108,7 @@ export default function Tracker() {
       ctrl.abort()
       if (rafHide.current) cancelAnimationFrame(rafHide.current)
     }
-  }, [])
+  }, [userEmail])
 
   // zero-emission aggregation from prefetched commutes
   const zeroDistance = useMemo(() => {

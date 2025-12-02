@@ -18,6 +18,26 @@ Frontend: **React + Vite + TypeScript** · Backend: **Express + Prisma + Postgre
 
 ---
 
+## Recommended Commands
+
+**Start everything:**
+```bash
+docker-compose up -d
+```
+
+**Apply migrations:**
+```bash
+docker-compose exec backend npx prisma migrate deploy
+```
+
+**Rebuild after code changes:**
+```bash
+docker-compose build backend
+docker-compose build frontend
+```
+
+---
+
 ## Running the App with Docker (recommended)
 
 From the project root (`VerdeGO/`):

@@ -22,9 +22,11 @@ function toResponse(goal: {
 
 router.get(
   '/goals',
-  validate([query('user_email').isEmail().withMessage('Valid email is required')]),
   asyncHandler(async (req: Request, res: Response) => {
-    const email = req.query.user_email as string;
+    const email = req.user?.email;
+    if (!email) {
+      throw new Error('User email not found in token');
+    }
     const goal = await weeklyGoalService.getGoalsByEmail(email);
     res.json({
       user_email: email,
@@ -36,7 +38,6 @@ router.get(
 router.put(
   '/goals',
   validate([
-    body('user_email').isEmail().withMessage('Valid email is required'),
     body('weeklyZeroKm')
       .isInt({ min: 0, max: 1000 })
       .withMessage('weeklyZeroKm must be between 0 and 1000'),
@@ -48,14 +49,18 @@ router.put(
       .withMessage('weeklyCommuteCount must be between 0 and 200'),
   ]),
   asyncHandler(async (req: Request, res: Response) => {
-    const { user_email, weeklyZeroKm, weeklyEmissionCapKg, weeklyCommuteCount } = req.body;
-    const goal = await weeklyGoalService.upsertGoalsByEmail(user_email, {
+    const email = req.user?.email;
+    if (!email) {
+      throw new Error('User email not found in token');
+    }
+    const { weeklyZeroKm, weeklyEmissionCapKg, weeklyCommuteCount } = req.body;
+    const goal = await weeklyGoalService.upsertGoalsByEmail(email, {
       weeklyZeroKm,
       weeklyEmissionCapKg,
       weeklyCommuteCount,
     });
     res.json({
-      user_email,
+      user_email: email,
       ...toResponse(goal),
     });
   })
@@ -63,12 +68,14 @@ router.put(
 
 router.post(
   '/goals/reset',
-  validate([body('user_email').isEmail().withMessage('Valid email is required')]),
   asyncHandler(async (req: Request, res: Response) => {
-    const { user_email } = req.body;
-    const goal = await weeklyGoalService.upsertGoalsByEmail(user_email, WEEKLY_GOAL_DEFAULTS);
+    const email = req.user?.email;
+    if (!email) {
+      throw new Error('User email not found in token');
+    }
+    const goal = await weeklyGoalService.upsertGoalsByEmail(email, WEEKLY_GOAL_DEFAULTS);
     res.json({
-      user_email,
+      user_email: email,
       ...toResponse(goal),
     });
   })

@@ -4,7 +4,7 @@ const DEFAULT_TIMEOUT = 7000 // ms
 
 export type Commute = {
   id?: number | string
-  user_email: string
+  user_email?: string // Optional - backend gets it from token
   date: string // YYYY-MM-DD
   mode: string
   distance_km: number
@@ -226,7 +226,7 @@ function daysAgoISO(n: number) {
 
 /* ---------- API surface ---------- */
 
-export async function createCommute(c: Commute, opts: FetchOpts = {}) {
+export async function createCommute(c: Omit<Commute, 'user_email'>, opts: FetchOpts = {}) {
   return fetchJSON(`${API}/api/commutes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -236,11 +236,10 @@ export async function createCommute(c: Commute, opts: FetchOpts = {}) {
 
 export async function deleteCommute(
   id: string | number,
-  user_email: string,
   opts: FetchOpts = {}
 ) {
   return fetchJSON(
-    `${API}/api/commutes/${id}?user_email=${encodeURIComponent(user_email)}`,
+    `${API}/api/commutes/${id}`,
     {
       method: 'DELETE'
     },
@@ -249,14 +248,14 @@ export async function deleteCommute(
 }
 
 
-type ListParams = { user_email: string, from?: string, to?: string }
-export async function listCommutes(params: ListParams, opts: FetchOpts = {}) {
+type ListParams = { from?: string, to?: string }
+export async function listCommutes(params: ListParams = {}, opts: FetchOpts = {}) {
   const from = params.from ?? daysAgoISO(60)
   const to = params.to ?? todayISO()
-  return fetchJSON<Commute[]>(`${API}/api/commutes${qs({ ...params, from, to })}`, {}, opts)
+  return fetchJSON<Commute[]>(`${API}/api/commutes${qs({ from, to })}`, {}, opts)
 }
 
-type SummaryBase = { user_email: string, from?: string, to?: string }
+type SummaryBase = { from?: string, to?: string }
 
 /** Strongly-typed helpers (no generics) */
 export async function emissionSummaryByMode(
@@ -285,11 +284,11 @@ export async function recommendRoute(payload: any, opts: FetchOpts = {}) {
   }, opts)
 }
 
-export async function getWeeklyGoals(user_email: string, opts: FetchOpts = {}) {
-  return fetchJSON<WeeklyGoalResponse>(`${API}/api/goals${qs({ user_email })}`, {}, opts)
+export async function getWeeklyGoals(opts: FetchOpts = {}) {
+  return fetchJSON<WeeklyGoalResponse>(`${API}/api/goals`, {}, opts)
 }
 
-export async function saveWeeklyGoals(payload: WeeklyGoalPayload, opts: FetchOpts = {}) {
+export async function saveWeeklyGoals(payload: Omit<WeeklyGoalPayload, 'user_email'>, opts: FetchOpts = {}) {
   return fetchJSON<WeeklyGoalResponse>(`${API}/api/goals`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -297,11 +296,11 @@ export async function saveWeeklyGoals(payload: WeeklyGoalPayload, opts: FetchOpt
   }, opts)
 }
 
-export async function resetWeeklyGoals(user_email: string, opts: FetchOpts = {}) {
+export async function resetWeeklyGoals(opts: FetchOpts = {}) {
   return fetchJSON<WeeklyGoalResponse>(`${API}/api/goals/reset`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_email })
+    body: JSON.stringify({})
   }, opts)
 }
 

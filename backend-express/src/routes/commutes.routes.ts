@@ -11,7 +11,6 @@ const router = Router();
 router.post(
   '/commutes',
   validate([
-    body('user_email').isEmail().withMessage('Valid email is required'),
     body('date').isISO8601().withMessage('Valid date (YYYY-MM-DD) is required'),
     body('mode').notEmpty().withMessage('Mode is required'),
     body('distance_km').isFloat({ min: 0 }).withMessage('Distance must be a positive number'),
@@ -19,7 +18,14 @@ router.post(
     body('notes').optional().isString(),
   ]),
   asyncHandler(async (req: Request, res: Response) => {
-    const result = await commuteService.createCommute(req.body);
+    const email = req.user?.email;
+    if (!email) {
+      throw new Error('User email not found in token');
+    }
+    const result = await commuteService.createCommute({
+      ...req.body,
+      user_email: email
+    });
     res.status(201).json({ id: result.id });
   })
 );
@@ -28,14 +34,17 @@ router.post(
 router.get(
   '/commutes',
   validate([
-    query('user_email').isEmail().withMessage('Valid email is required'),
     query('from').optional().isISO8601(),
     query('to').optional().isISO8601(),
   ]),
   asyncHandler(async (req: Request, res: Response) => {
-    const { user_email, from, to } = req.query;
+    const email = req.user?.email;
+    if (!email) {
+      throw new Error('User email not found in token');
+    }
+    const { from, to } = req.query;
     const commutes = await commuteService.listCommutes(
-      user_email as string,
+      email,
       from as string | undefined,
       to as string | undefined
     );
@@ -46,13 +55,13 @@ router.get(
 // DELETE /api/commutes/:id
 router.delete(
   '/commutes/:id',
-  validate([
-    query('user_email').optional().isEmail().withMessage('Valid email is required'),
-  ]),
   asyncHandler(async (req: Request, res: Response) => {
+    const email = req.user?.email;
+    if (!email) {
+      throw new Error('User email not found in token');
+    }
     const { id } = req.params;
-    const user_email = (req.query.user_email as string) || 'demo@user';
-    const deleted = await commuteService.deleteCommute(id, user_email);
+    const deleted = await commuteService.deleteCommute(id, email);
     if (!deleted) {
       throw new NotFoundError('Commute not found');
     }
