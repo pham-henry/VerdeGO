@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { registerUser } from '../lib/api' // make sure this exists
+import { useAuth } from '../context/AuthContext'
 
 export default function Register() {
   const [name, setName] = useState('')
@@ -8,6 +9,7 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
+  const { login } = useAuth()
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -15,15 +17,8 @@ export default function Register() {
 
     try {
       const resp = await registerUser({ name, email, password })
-
-      // store auth info
-      localStorage.setItem('accessToken', resp.accessToken)
-      localStorage.setItem('refreshToken', resp.refreshToken)
-      localStorage.setItem('email', resp.email)
-      if (resp.name || name) {
-        localStorage.setItem('name', resp.name ?? name)
-      }
-
+      // prefer backend name, fall back to typed name
+      login({ ...resp, name: resp.name ?? name })
       navigate('/home')
     } catch (err: any) {
       setError(err?.message || 'Registration failed')

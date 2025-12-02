@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { API, fetchJSON } from '../lib/api' 
+import { useAuth } from '../context/AuthContext'
 
 export default function Account() {
   const navigate = useNavigate()
+  const { user, accessToken, logout } = useAuth()
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -14,13 +16,13 @@ export default function Account() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // load initial data from localStorage
+  // load initial data from auth context
   useEffect(() => {
-    const storedEmail = localStorage.getItem('email') || ''
-    const storedName = localStorage.getItem('name') || ''
-    setEmail(storedEmail)
-    setName(storedName)
-  }, [])
+    if (user) {
+      setEmail(user.email)
+      setName(user.name || '')
+    }
+  }, [user])
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault()
@@ -29,7 +31,6 @@ export default function Account() {
     setSavingProfile(true)
 
     try {
-      const accessToken = localStorage.getItem('accessToken')
       // adjust endpoint/method to match your backend
       await fetchJSON(`${API}/api/users/me`, {
         method: 'PATCH',
@@ -40,7 +41,6 @@ export default function Account() {
         body: JSON.stringify({ name })
       })
 
-      localStorage.setItem('name', name)
       setMessage('Profile updated successfully.')
     } catch (err: any) {
       setError(err?.message || 'Failed to update profile.')
@@ -56,7 +56,6 @@ export default function Account() {
     setSavingPassword(true)
 
     try {
-      const accessToken = localStorage.getItem('accessToken')
       await fetchJSON(`${API}/api/users/change-password`, {
         method: 'POST',
         headers: {
@@ -80,11 +79,8 @@ export default function Account() {
   }
 
   function signOut() {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    localStorage.removeItem('email')
-    localStorage.removeItem('name')
-    navigate('/')
+    logout()
+    navigate('/login')
   }
 
   return (

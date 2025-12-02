@@ -11,6 +11,7 @@ import emissionsRoutes from './routes/emissions.routes';
 import recommenderRoutes from './routes/recommender.routes';
 import testRoutes from './routes/test.routes';
 import goalsRoutes from './routes/goals.routes';
+import { authenticateToken } from './middleware/auth.middleware';
 
 // Load environment variables
 dotenv.config();
@@ -54,14 +55,19 @@ app.use(cors(corsConfig));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// Public routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api', commutesRoutes);
-app.use('/api', emissionsRoutes);
-app.use('/api', recommenderRoutes);
-app.use('/api', goalsRoutes);
-app.use('/api/test', testRoutes);
+
+// Protected routes (all require valid access token)
+const protectedRouter = express.Router();
+protectedRouter.use(authenticateToken);
+protectedRouter.use('/users', userRoutes);
+protectedRouter.use('/', commutesRoutes);
+protectedRouter.use('/', emissionsRoutes);
+protectedRouter.use('/', recommenderRoutes);
+protectedRouter.use('/goals', goalsRoutes);
+protectedRouter.use('/test', testRoutes);
+app.use('/api', protectedRouter);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
