@@ -17,7 +17,6 @@ const defaultEmail = 'demo@user.com'
 const MODE_COLORS: Record<string, string> = {
   scooter: '#9CCC65',
   bus: '#2196F3',
-  train: '#03A9F4',
   car_gas: '#E53935',
   car_hybrid: '#FB8C00',
   car_ev: '#8E24AA',

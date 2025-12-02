@@ -29,7 +29,6 @@ const EMISSION_FACTORS: Record<string, number> = {
   bike: 0,
   scooter: 0.021,
   bus: 0.105,
-  train: 0.041,
   car_gas: 0.192,
   car_hybrid: 0.120,
   car_ev: 0.050,
@@ -41,7 +40,6 @@ const ELECTRIC_PRICE_USD_PER_KWH = 0.20
 const GAS_MPG = 28
 const EV_MILES_PER_KWH = 3.5
 const BUS_FARE_FLAT = 2.50
-const TRAIN_FARE_FLAT = 3.50
 
 function kmToMiles(km: number): number { return km * 0.621371 }
 function safeNumber(x: any, fallback = 0): number { const n = Number(x); return Number.isFinite(n) ? n : fallback }
@@ -57,7 +55,6 @@ function costUSD(mode: string, distance_km: number): number {
 
   if (mode === 'walk' || mode === 'bike' || mode === 'scooter') return 0
   if (mode === 'bus') return BUS_FARE_FLAT
-  if (mode === 'train') return TRAIN_FARE_FLAT
 
   if (mode === 'car_gas') {
     const gallons: number = miles / GAS_MPG
@@ -81,7 +78,6 @@ function costUSD(mode: string, distance_km: number): number {
 function detectMode(opt: Option): string {
   const s = `${opt.mode ?? ''} ${opt.summary ?? ''}`.toLowerCase()
   if (s.includes('walk')) return 'walk'
-  if (s.includes('light rail') || s.includes('train')) return 'train'
   if (s.includes('bike')) return 'bike'
   if (s.includes('scooter')) return 'scooter'
   if (s.includes('bus')) return 'bus'
@@ -97,7 +93,6 @@ function modeLabel(mode: string): string {
     case 'bike': return 'Biking'
     case 'scooter': return 'Scooter'
     case 'bus': return 'Bus'
-    case 'train': return 'Train'
     case 'car_gas': return 'Car (Gas)'
     case 'car_hybrid': return 'Car (Hybrid)'
     case 'car_ev': return 'Car (EV)'
@@ -133,8 +128,8 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
 
 /* ================= Component ================= */
 export default function Recommender() {
-  const [origin, setOrigin] = useState('SJSU, San Jose, CA')
-  const [destination, setDestination] = useState("Levi's Stadium, Santa Clara, CA")
+  const [origin, setOrigin] = useState('')
+  const [destination, setDestination] = useState('')
   const [resp, setResp] = useState<{ options?: Option[] } | null>(null)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -469,25 +464,68 @@ export default function Recommender() {
       <h2>Customizable Transit Recommender</h2>
 
       {/* Controls */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 12, maxWidth: 900 }}>
-        <label>Origin
-          <input ref={originInputRef} value={origin} onChange={e => setOrigin(e.target.value)} />
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr auto auto",
+          gap: 16,
+          maxWidth: 900,
+          alignItems: "end",
+        }}
+      >
+        {/* Origin */}
+        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span>Origin:</span>
+          <input
+            ref={originInputRef}
+            value={origin}
+            onChange={(e) => setOrigin(e.target.value)}
+            style={{ padding: "6px 8px" }}
+          />
         </label>
-        <label>Destination
-          <input ref={destInputRef} value={destination} onChange={e => setDestination(e.target.value)} />
+
+        {/* Destination */}
+        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span>Destination:</span>
+          <input
+            ref={destInputRef}
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+            style={{ padding: "6px 8px" }}
+          />
         </label>
-        <button onClick={swap} style={{ alignSelf: 'end', height: 36 }}>Swap ↑↓</button>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button onClick={run} disabled={loading} style={{ alignSelf: 'stretch', height: 36 }}>
-            {loading ? 'Recommending…' : 'Recommend'}
+
+        {/* Swap button */}
+        <button
+          onClick={swap}
+          style={{
+            height: 36,
+            marginTop: 22,
+          }}
+        >
+          Swap ↑↓
+        </button>
+
+        {/* Recommend + Clear buttons */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <button
+            onClick={run}
+            disabled={loading}
+            style={{ height: 36 }}
+          >
+            {loading ? "Recommending…" : "Recommend"}
           </button>
-          <button onClick={clearAll} style={{ alignSelf: 'stretch', height: 32 }}>
+
+          <button
+            onClick={clearAll}
+            style={{ height: 32 }}
+          >
             Clear
           </button>
         </div>
       </div>
 
-      {/* NEW: Priority controls above the map */}
+      {/* Priority controls above the map */}
       <section
         style={{
           marginTop: 16,
