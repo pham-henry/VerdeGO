@@ -6,12 +6,14 @@ const defaultEmail = 'demo@user.com'
 export default function Logger() {
   const [form, setForm] = useState<Commute>({
     user_email: defaultEmail,
-    date: new Date().toISOString().slice(0, 10),
+    date: new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles"
+    }).format(new Date()),   // <-- PST date (YYYY-MM-DD)
     mode: '',
     distance_km: 0,
     duration_min: 0,
     notes: ''
-  })
+  });
 
   const [allRows, setAllRows] = useState<any[]>([])
   const [showAll, setShowAll] = useState(false)
@@ -86,9 +88,9 @@ export default function Logger() {
             value={form.mode}
             onChange={e => setForm({ ...form, mode: e.target.value })}
           >
-            <option>walk</option><option>bike</option><option>scooter</option>
-            <option>bus</option>
-            <option>car_gas</option><option>car_hybrid</option><option>car_ev</option>
+            <option>Walk</option><option>Bike</option><option>Scooter</option>
+            <option>Bus</option>
+            <option>Car (Gas)</option><option>Car (Hybrid)</option><option>Car (EV)</option>
           </select>
         </label>
 
