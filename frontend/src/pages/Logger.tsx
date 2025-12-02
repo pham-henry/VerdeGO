@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, CSSProperties } from 'react'
 import { createCommute, listCommutes, deleteCommute, Commute } from '../lib/api'
 
 const emailFromStorage = localStorage.getItem('email') || ''
@@ -142,70 +142,308 @@ export default function Logger() {
         </button>
       </div>
 
-      {/* Commutes table */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
-        <thead>
-          <tr style={{ backgroundColor: '#f3f3f3', borderBottom: '2px solid #ccc' }}>
-            <th align="left" style={{ padding: '10px 12px' }}>Date</th>
-            <th align="left" style={{ padding: '10px 12px' }}>Mode</th>
-            <th align="right" style={{ padding: '10px 12px' }}>Distance (km)</th>
-            <th align="right" style={{ padding: '10px 12px' }}>Duration (min)</th>
-            <th align="left" style={{ padding: '10px 12px' }}>Notes</th>
-            <th style={{ padding: '10px 12px' }} />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(r => (
-            <tr key={r.id} style={{ borderTop: '1px solid #ddd' }}>
-              <td style={{ padding: '8px 12px' }}>{r.date}</td>
-              <td style={{ padding: '8px 12px' }}>{r.mode}</td>
-              <td align="right" style={{ padding: '8px 12px' }}>{r.distance_km}</td>
-              <td align="right" style={{ padding: '8px 12px' }}>{r.duration_min ?? '-'}</td>
-              <td style={{ padding: '8px 12px' }}>{r.notes ?? ''}</td>
-              <td style={{ padding: '8px 12px' }}>
-                <button onClick={() => remove(r.id)}>Delete</button>
-              </td>
-            </tr>
-          ))}
-          {!rows.length && (
-            <tr>
-              <td colSpan={6} style={{ opacity: 0.6, padding: 12 }}>
-                No data yet. Add your first commute above.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-
-      {/* Pagination controls (only visible in View All) */}
-      {showAll && totalPages > 1 && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 16,
-          marginTop: 12
-        }}>
-          <button
-            onClick={() => setPage(p => Math.max(p - 1, 0))}
-            disabled={page === 0}
-            style={{ padding: '6px 10px' }}
-          >
-            ← Prev
-          </button>
-          <span>
-            Page {page + 1} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage(p => Math.min(p + 1, totalPages - 1))}
-            disabled={page === totalPages - 1}
-            style={{ padding: '6px 10px' }}
-          >
-            Next →
-          </button>
+        {/* Commutes table */}
+        <div style={tableWrapper}>
+          <table style={table}>
+            <thead>
+              <tr>
+                <th style={th}>Date</th>
+                <th style={th}>Mode</th>
+                <th style={{ ...th, textAlign: 'right' }}>Distance</th>
+                <th style={{ ...th, textAlign: 'right' }}>Duration</th>
+                <th style={th}>Notes</th>
+                <th style={th}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, idx) => (
+                <tr key={r.id} style={tr}>
+                  <td style={td}>{r.date}</td>
+                  <td style={td}>
+                    <span style={modeBadge}>{r.mode}</span>
+                  </td>
+                  <td style={{ ...td, textAlign: 'right', fontWeight: 600 }}>{r.distance_km?.toFixed(1) || '0.0'} km</td>
+                  <td style={{ ...td, textAlign: 'right' }}>{r.duration_min ?? '-'} min</td>
+                  <td style={{ ...td, color: 'var(--text-tertiary)' }}>{r.notes || '-'}</td>
+                  <td style={td}>
+                    <button
+                      onClick={() => remove(r.id)}
+                      style={deleteButton}
+                      aria-label="Delete commute"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {!rows.length && (
+                <tr>
+                  <td colSpan={6} style={emptyState}>
+                    <div style={emptyStateContent}>
+                      <p>No commutes yet. Add your first commute above to get started!</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+
+        {/* Pagination controls */}
+        {showAll && totalPages > 1 && (
+          <div style={pagination}>
+            <button
+              onClick={() => setPage(p => Math.max(p - 1, 0))}
+              disabled={page === 0}
+              style={paginationButton}
+            >
+              ← Previous
+            </button>
+            <span style={paginationInfo}>
+              Page {page + 1} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(p + 1, totalPages - 1))}
+              disabled={page === totalPages - 1}
+              style={paginationButton}
+            >
+              Next →
+            </button>
+          </div>
+        )}
     </div>
   )
+}
+
+function getModeIcon(mode: string): string {
+  return ''
+}
+
+const container: React.CSSProperties = {
+  maxWidth: 1200,
+  margin: '0 auto',
+  padding: 'var(--spacing-lg)',
+}
+
+const headerSection: React.CSSProperties = {
+  marginBottom: 'var(--spacing-xl)',
+}
+
+const title: React.CSSProperties = {
+  fontSize: '2rem',
+  fontWeight: 700,
+  marginBottom: 'var(--spacing-sm)',
+  background: 'linear-gradient(135deg, var(--verdego-green), var(--verdego-dark))',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
+}
+
+const subtitle: React.CSSProperties = {
+  fontSize: '1rem',
+  color: 'var(--text-secondary)',
+  marginBottom: 0,
+}
+
+const formCard: React.CSSProperties = {
+  backgroundColor: 'var(--bg-white)',
+  borderRadius: 'var(--radius-lg)',
+  padding: 'var(--spacing-xl)',
+  marginBottom: 'var(--spacing-xl)',
+  boxShadow: 'var(--shadow-md)',
+  border: '1px solid var(--border-light)',
+}
+
+const formTitle: React.CSSProperties = {
+  fontSize: '1.25rem',
+  fontWeight: 600,
+  marginBottom: 'var(--spacing-lg)',
+  color: 'var(--text-primary)',
+}
+
+const formStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--spacing-lg)',
+}
+
+const formGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+  gap: 'var(--spacing-md)',
+}
+
+const field: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--spacing-xs)',
+}
+
+const label: React.CSSProperties = {
+  fontSize: '13px',
+  fontWeight: 600,
+  color: 'var(--text-secondary)',
+  marginBottom: 'var(--spacing-xs)',
+}
+
+const input: React.CSSProperties = {
+  padding: 'var(--spacing-md)',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border-light)',
+  fontSize: '15px',
+  transition: 'all var(--transition-fast)',
+  backgroundColor: 'var(--bg-white)',
+}
+
+const select: React.CSSProperties = {
+  ...input,
+  cursor: 'pointer',
+}
+
+const submitButton: React.CSSProperties = {
+  padding: 'var(--spacing-md) var(--spacing-xl)',
+  backgroundColor: 'var(--color-primary)',
+  color: 'var(--text-light)',
+  borderRadius: 'var(--radius-md)',
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: '16px',
+  fontWeight: 600,
+  transition: 'all var(--transition-fast)',
+  boxShadow: 'var(--shadow-md)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 'var(--spacing-sm)',
+  alignSelf: 'flex-start',
+}
+
+const tableSection: React.CSSProperties = {
+  backgroundColor: 'var(--bg-white)',
+  borderRadius: 'var(--radius-lg)',
+  padding: 'var(--spacing-xl)',
+  boxShadow: 'var(--shadow-md)',
+  border: '1px solid var(--border-light)',
+}
+
+const tableHeader: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 'var(--spacing-lg)',
+  flexWrap: 'wrap',
+  gap: 'var(--spacing-md)',
+}
+
+const tableTitle: React.CSSProperties = {
+  fontSize: '1.25rem',
+  fontWeight: 600,
+  margin: 0,
+  color: 'var(--text-primary)',
+}
+
+const toggleButton: React.CSSProperties = {
+  padding: 'var(--spacing-sm) var(--spacing-md)',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border-light)',
+  background: 'var(--bg-light)',
+  cursor: 'pointer',
+  fontSize: '14px',
+  fontWeight: 500,
+  transition: 'all var(--transition-fast)',
+}
+
+const tableWrapper: React.CSSProperties = {
+  overflowX: 'auto',
+}
+
+const table: React.CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+}
+
+const th: React.CSSProperties = {
+  textAlign: 'left',
+  padding: 'var(--spacing-md)',
+  fontSize: '12px',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  color: 'var(--text-secondary)',
+  borderBottom: '2px solid var(--border-light)',
+  backgroundColor: 'var(--bg-light)',
+}
+
+const tr: React.CSSProperties = {
+  borderBottom: '1px solid var(--border-light)',
+  transition: 'background-color var(--transition-fast)',
+}
+
+const td: React.CSSProperties = {
+  padding: 'var(--spacing-md)',
+  fontSize: '14px',
+  color: 'var(--text-primary)',
+}
+
+const modeBadge: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 'var(--spacing-xs)',
+  padding: 'var(--spacing-xs) var(--spacing-sm)',
+  borderRadius: 'var(--radius-sm)',
+  backgroundColor: 'var(--color-primary-light)',
+  color: 'var(--verdego-dark)',
+  fontSize: '13px',
+  fontWeight: 500,
+}
+
+const deleteButton: React.CSSProperties = {
+  padding: 'var(--spacing-xs) var(--spacing-sm)',
+  borderRadius: 'var(--radius-sm)',
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  fontSize: '16px',
+  transition: 'all var(--transition-fast)',
+  opacity: 0.7,
+}
+
+const emptyState: React.CSSProperties = {
+  padding: 'var(--spacing-2xl)',
+  textAlign: 'center',
+}
+
+const emptyStateContent: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 'var(--spacing-md)',
+  color: 'var(--text-tertiary)',
+}
+
+const pagination: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: 'var(--spacing-lg)',
+  marginTop: 'var(--spacing-lg)',
+  paddingTop: 'var(--spacing-lg)',
+  borderTop: '1px solid var(--border-light)',
+}
+
+const paginationButton: React.CSSProperties = {
+  padding: 'var(--spacing-sm) var(--spacing-md)',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border-light)',
+  background: 'var(--bg-white)',
+  cursor: 'pointer',
+  fontSize: '14px',
+  fontWeight: 500,
+  transition: 'all var(--transition-fast)',
+}
+
+const paginationInfo: React.CSSProperties = {
+  fontSize: '14px',
+  color: 'var(--text-secondary)',
+  fontWeight: 500,
 }
 

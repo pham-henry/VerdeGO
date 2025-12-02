@@ -7,6 +7,7 @@ import React, {
   useCallback
 } from 'react'
 import type { AuthResponse } from '../lib/api'
+import { setTokenRefreshCallback } from '../lib/api'
 
 type AuthUser = {
   email: string
@@ -54,7 +55,32 @@ function readInitialState(): AuthState {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(() => readInitialState())
 
+
   // Keep localStorage in sync with *state*
+  // Register token refresh callback to update state when tokens are refreshed
+  useEffect(() => {
+    setTokenRefreshCallback((tokens: AuthResponse) => {
+      if (tokens.accessToken && tokens.email) {
+        // Tokens were refreshed successfully
+        setState({
+          user: { email: tokens.email, name: tokens.name },
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          isAuthenticated: true
+        })
+      } else {
+        // Refresh failed - logout user
+        setState({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false
+        })
+      }
+    })
+  }, [])
+
+
   useEffect(() => {
     if (state.isAuthenticated && state.user) {
       localStorage.setItem('accessToken', state.accessToken || '')
