@@ -45,6 +45,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8080
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
     container_name: verdego-frontend
     ports:
       - "5173:80"
@@ -56,6 +59,7 @@ services:
     networks:
       - verdego-network
     restart: unless-stopped
+
 
   pgadmin:
     image: dpage/pgadmin4:latest

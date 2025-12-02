@@ -21,6 +21,8 @@ type RankRow = {
   raw: { co2_kg?: number; duration_min?: number; cost_usd?: number }
 }
 
+type Priority = 1 | 2 | 3
+
 /* --------- Emissions & cost helpers --------- */
 const EMISSION_FACTORS: Record<string, number> = {
   walk: 0,
@@ -78,7 +80,6 @@ function costUSD(mode: string, distance_km: number): number {
 
 function detectMode(opt: Option): string {
   const s = `${opt.mode ?? ''} ${opt.summary ?? ''}`.toLowerCase()
-  // train prioritized before bike for mixed "bike + light rail"
   if (s.includes('walk')) return 'walk'
   if (s.includes('light rail') || s.includes('train')) return 'train'
   if (s.includes('bike')) return 'bike'
@@ -137,6 +138,11 @@ export default function Recommender() {
   const [resp, setResp] = useState<{ options?: Option[] } | null>(null)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  // NEW: user priorities for eco / speed / cost
+  const [ecoPriority, setEcoPriority] = useState<Priority>(1)
+  const [speedPriority, setSpeedPriority] = useState<Priority>(2)
+  const [costPriority, setCostPriority] = useState<Priority>(3)
 
   // Map refs/objs
   const mapRef = useRef<HTMLDivElement | null>(null)
@@ -280,86 +286,183 @@ export default function Recommender() {
     })
   }
 
-  async function run(): Promise<void> {
-    try {
-      setLoading(true)
-      setErrorMsg(null)
+  function clearAll(): void {
+    setOrigin('')
+    setDestination('')
+    setResp(null)
+    setErrorMsg(null)
 
-      const oPos = markers.current.origin?.getPosition?.()
-      const dPos = markers.current.destination?.getPosition?.()
-
-      const payload = (oPos && dPos)
-        ? {
-            origin: { lat: oPos.lat(), lng: oPos.lng() },
-            destination: { lat: dPos.lat(), lng: dPos.lng() },
-            prefs: { eco: true, fastest: true, least_transfers: true }
-          }
-        : {
-            origin,
-            destination,
-            prefs: { eco: true, fastest: true, least_transfers: true }
-          }
-
-      const data = await recommendRoute(payload as any) as { options?: Option[] } | null
-      if (!data || ((Array.isArray(data) && data.length === 0) || (!Array.isArray(data) && !data?.options))) {
-        setErrorMsg('No route options returned. Try different locations or check the backend.')
-        return
+    const g = (window as any).google
+    if (g && mapObj.current) {
+      if (markers.current.origin) {
+        markers.current.origin.setMap(null)
       }
-      setResp(data)
-    } catch (err: any) {
-      console.error('recommend failed', err)
-      setErrorMsg(err?.message || 'Failed to fetch recommendations. Is the server running?')
-    } finally {
-      setLoading(false)
+      if (markers.current.destination) {
+        markers.current.destination.setMap(null)
+      }
+      markers.current = {}
+    }
+    if (polylineRef.current) {
+      polylineRef.current.setPath([])
     }
   }
 
-  /* -------- Build ranking rows from response -------- */
-  const rows: RankRow[] = useMemo(() => {
-    const options: Option[] = resp?.options ?? []
-    const bestPerMode = new Map<string, Option>()
+  async function run(): Promise<void> {
+  try {
+    setLoading(true)
+    setErrorMsg(null)
 
-    for (const opt of options) {
-      const mode = detectMode(opt)
-      const prev = bestPerMode.get(mode)
-      if (!prev || safeNumber(opt.duration_min, Infinity) < safeNumber(prev.duration_min, Infinity)) {
-        bestPerMode.set(mode, { ...opt, mode })
-      }
+    const oPos = markers.current.origin?.getPosition?.()
+    const dPos = markers.current.destination?.getPosition?.()
+
+    const prefs = {
+      ecoPriority,
+      speedPriority,
+      costPriority,
     }
 
-    const arr: RankRow[] = Array.from(bestPerMode.values()).map((opt) => {
+    const payload = (oPos && dPos)
+      ? {
+          origin: { lat: oPos.lat(), lng: oPos.lng() },
+          destination: { lat: dPos.lat(), lng: dPos.lng() },
+          prefs,
+        }
+      : {
+          origin,
+          destination,
+          prefs,
+        }
+
+    const data = await recommendRoute(payload as any) as { options?: Option[] } | null
+
+    if (!data || ((Array.isArray(data) && data.length === 0) || (!Array.isArray(data) && !data?.options))) {
+      setErrorMsg('No route options returned. Try different locations or check the backend.')
+      return
+    }
+    setResp(data)
+  } catch (err: any) {
+    console.error('recommend failed', err)
+    setErrorMsg(err?.message || 'Failed to fetch recommendations. Is the server running?')
+  } finally {
+    setLoading(false)
+  }
+}
+
+
+   /* -------- Build ranking rows from response, using priorities -------- */
+  const rows: RankRow[] = useMemo(() => {
+    const options: Option[] = resp?.options ?? []
+    if (!options.length) return []
+
+    // Helper: get mode & basic metrics for each option
+    type RowMetrics = {
+      mode: string
+      label: string
+      co2_kg: number
+      duration_min: number
+      cost_usd: number
+    }
+
+    const metrics: RowMetrics[] = options.map((opt) => {
       const mode = opt.mode || detectMode(opt)
       const co2_kg = safeNumber(opt.co2_kg, 0)
       const duration_min = safeNumber(opt.duration_min, 0)
       const dist_km = estimateDistanceKm(mode, co2_kg)
-      const cst = costUSD(mode, dist_km)
+      const cost_usd = costUSD(mode, dist_km)
       return {
         mode,
         label: modeLabel(mode),
-        raw: { co2_kg, duration_min, cost_usd: Number(cst.toFixed(2)) }
+        co2_kg,
+        duration_min,
+        cost_usd: Number(cost_usd.toFixed(2)),
       }
     })
 
-    const ecoVals = arr.map(r => r.raw.co2_kg ?? Infinity)
-    const spdVals = arr.map(r => r.raw.duration_min ?? Infinity)
-    const costVals = arr.map(r => r.raw.cost_usd ?? Infinity)
+    if (!metrics.length) return []
 
-    if (arr.length) {
-      const ecoRanks = rankAscending(ecoVals)
-      const spdRanks = rankAscending(spdVals)
-      const cstRanks = rankAscending(costVals)
-      arr.forEach((r, i) => {
-        r.eco = ecoRanks[i]
-        r.speed = spdRanks[i]
-        r.cost = cstRanks[i]
-        const used = [r.eco, r.speed, r.cost] as number[]
-        r.overall = Number((used.reduce((a, b) => a + b, 0) / used.length).toFixed(2))
-      })
-      arr.sort((a, b) => (a.overall ?? 999) - (b.overall ?? 999))
+    // ---- helper funcs ----
+    const weightForPriority = (p: 1 | 2 | 3): number => {
+      // 1 = most important, 3 = least important
+      if (p === 1) return 1.0
+      if (p === 2) return 0.7
+      return 0.5 // p === 3
     }
 
-    return arr
-  }, [resp])
+    const normalize = (val: number, min: number, max: number): number => {
+      if (!Number.isFinite(val)) return 0.5
+      if (max === min) return 1 // all same → treat as equally good
+      return (val - min) / (max - min)
+    }
+
+    const rankDescending = (scores: number[]): number[] => {
+      const pairs = scores.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v)
+      const ranks = Array(scores.length).fill(0)
+      let currentRank = 1
+      for (let idx = 0; idx < pairs.length; idx++) {
+        if (idx > 0 && pairs[idx].v !== pairs[idx - 1].v) currentRank = idx + 1
+        ranks[pairs[idx].i] = currentRank
+      }
+      return ranks
+    }
+
+    // ---- raw arrays ----
+    const ecoVals = metrics.map(m => m.co2_kg)         // lower is better
+    const speedVals = metrics.map(m => m.duration_min) // lower duration is better (faster)
+    const costVals = metrics.map(m => m.cost_usd)      // lower is better
+
+    const minEco = Math.min(...ecoVals)
+    const maxEco = Math.max(...ecoVals)
+    const minSpeed = Math.min(...speedVals)
+    const maxSpeed = Math.max(...speedVals)
+    const minCost = Math.min(...costVals)
+    const maxCost = Math.max(...costVals)
+
+    // ---- normalized scores (0..1, higher = better) ----
+    const ecoScores = ecoVals.map(v => 1 - normalize(v, minEco, maxEco))   // lower co₂ → higher score
+    const speedScores = speedVals.map(v => 1 - normalize(v, minSpeed, maxSpeed)) // lower time → higher score
+    const costScores = costVals.map(v => 1 - normalize(v, minCost, maxCost))     // lower cost → higher score
+
+    // ---- ranks for display (1 = best) ----
+    const ecoRanks = rankDescending(ecoScores)
+    const speedRanks = rankDescending(speedScores)
+    const costRanks = rankDescending(costScores)
+
+    // ---- priorities → weights ----
+    const ecoWeight = weightForPriority(ecoPriority)
+    const speedWeight = weightForPriority(speedPriority)
+    const costWeight = weightForPriority(costPriority)
+
+    // ---- build final rows ----
+    const rows: RankRow[] = metrics.map((m, idx) => {
+      const ecoScore = ecoScores[idx]
+      const speedScore = speedScores[idx]
+      const costScore = costScores[idx]
+
+      const overall =
+        ecoScore * ecoWeight +
+        speedScore * speedWeight +
+        costScore * costWeight
+
+      return {
+        mode: m.mode,
+        label: m.label,
+        eco: ecoRanks[idx],
+        speed: speedRanks[idx],
+        cost: costRanks[idx],
+        overall: Number(overall.toFixed(3)),
+        raw: {
+          co2_kg: m.co2_kg,
+          duration_min: m.duration_min,
+          cost_usd: m.cost_usd,
+        },
+      }
+    })
+
+    // Sort by overall descending (higher score = better)
+    rows.sort((a, b) => (b.overall ?? 0) - (a.overall ?? 0))
+
+    return rows
+  }, [resp, ecoPriority, speedPriority, costPriority])
 
   return (
     <div>
@@ -374,10 +477,71 @@ export default function Recommender() {
           <input ref={destInputRef} value={destination} onChange={e => setDestination(e.target.value)} />
         </label>
         <button onClick={swap} style={{ alignSelf: 'end', height: 36 }}>Swap ↑↓</button>
-        <button onClick={run} disabled={loading} style={{ alignSelf: 'end', height: 36 }}>
-          {loading ? 'Recommending…' : 'Recommend'}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button onClick={run} disabled={loading} style={{ alignSelf: 'stretch', height: 36 }}>
+            {loading ? 'Recommending…' : 'Recommend'}
+          </button>
+          <button onClick={clearAll} style={{ alignSelf: 'stretch', height: 32 }}>
+            Clear
+          </button>
+        </div>
       </div>
+
+      {/* NEW: Priority controls above the map */}
+      <section
+        style={{
+          marginTop: 16,
+          padding: 12,
+          borderRadius: 8,
+          border: '1px solid #e0e0e0',
+          background: '#FAFAFA',
+          maxWidth: 900
+        }}
+      >
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>
+          What matters most for this trip?
+        </div>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', fontSize: 14 }}>
+            Eco impact
+            <select
+              value={ecoPriority}
+              onChange={e => setEcoPriority(Number(e.target.value) as Priority)}
+              style={{ marginTop: 4, padding: '4px 8px' }}
+            >
+              <option value={1}>1 (highest)</option>
+              <option value={2}>2</option>
+              <option value={3}>3 (lowest)</option>
+            </select>
+          </label>
+
+          <label style={{ display: 'flex', flexDirection: 'column', fontSize: 14 }}>
+            Speed
+            <select
+              value={speedPriority}
+              onChange={e => setSpeedPriority(Number(e.target.value) as Priority)}
+              style={{ marginTop: 4, padding: '4px 8px' }}
+            >
+              <option value={1}>1 (highest)</option>
+              <option value={2}>2</option>
+              <option value={3}>3 (lowest)</option>
+            </select>
+          </label>
+
+          <label style={{ display: 'flex', flexDirection: 'column', fontSize: 14 }}>
+            Cost
+            <select
+              value={costPriority}
+              onChange={e => setCostPriority(Number(e.target.value) as Priority)}
+              style={{ marginTop: 4, padding: '4px 8px' }}
+            >
+              <option value={1}>1 (highest)</option>
+              <option value={2}>2</option>
+              <option value={3}>3 (lowest)</option>
+            </select>
+          </label>
+        </div>
+      </section>
 
       {errorMsg && <div style={{ marginTop: 8, color: '#b00020' }}>{errorMsg}</div>}
 
@@ -397,7 +561,7 @@ export default function Recommender() {
                 <th style={{ textAlign: 'right', padding: '10px 12px' }}>Eco-friendly</th>
                 <th style={{ textAlign: 'right', padding: '10px 12px' }}>Speed</th>
                 <th style={{ textAlign: 'right', padding: '10px 12px' }}>Cost</th>
-                <th style={{ textAlign: 'right', padding: '10px 12px' }}>Overall</th>
+                <th style={{ textAlign: 'right', padding: '10px 12px' }}>Recommendation</th>
               </tr>
             </thead>
             <tbody>
@@ -415,10 +579,9 @@ export default function Recommender() {
         </div>
       ) : (
         <p style={{ marginTop: 16, opacity: 0.7 }}>
-          No options yet — set origin & destination, then click <b>Recommend</b>.
+          No options yet — set origin & destination, pick your priorities, then click <b>Recommend</b>.
         </p>
       )}
     </div>
   )
 }
-
