@@ -192,48 +192,14 @@ export async function fetchJSON<T>(
       }
     }
     
-    // ----- inject Authorization header if we have an access token -----
-    let headers: Headers
-
-    if (init.headers instanceof Headers) {
-      headers = new Headers(init.headers)
-    } else {
-      headers = new Headers(init.headers || {})
-    }
-
-    try {
-      // guard for SSR, though in Vite this is usually fine
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const token = localStorage.getItem('accessToken')
-        if (token && !headers.has('Authorization')) {
-          headers.set('Authorization', `Bearer ${token}`)
-        }
-      }
-    } catch {
-      // if localStorage is unavailable for any reason, just skip auth header
-    }
-
-    const res = await fetch(input, {
-      ...init,
-      headers,
-      signal: controller.signal,
-    })
-
     if (!res.ok) {
       let detail: any = null
-      try {
-        detail = await res.json()
-      } catch {
-        // ignore body parse errors
-      }
+      try { detail = await res.json() } catch {}
       const msg = detail?.message || `HTTP ${res.status} ${res.statusText}`
       throw new Error(msg)
     }
-
-    if (res.status === 204) {
-      return undefined as unknown as T
-    }
-
+    
+    if (res.status === 204) return undefined as unknown as T
     return res.json() as Promise<T>
   } finally {
     clearTimeout(timer)

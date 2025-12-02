@@ -211,7 +211,6 @@ export default function Logger() {
             </button>
           </div>
         )}
-      </section>
     </div>
   )
 }
