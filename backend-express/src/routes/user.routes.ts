@@ -66,9 +66,9 @@ router.patch(
   })
 );
 
-// POST /api/users/me/password – change password
+// POST /api/users/change-password
 router.post(
-  '/me/password',
+  '/change-password',
   authenticateToken,
   validate([
     body('currentPassword').notEmpty().withMessage('Current password is required'),
