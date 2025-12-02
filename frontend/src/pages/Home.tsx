@@ -30,6 +30,14 @@ function loadGoals(email: string): WeeklyGoals {
 
 // ---- Component ----
 export default function Home() {
+  // ---- Name (must be inside component) ----
+  const [userName, setUserName] = useState<string>('')
+
+  useEffect(() => {
+    const n = localStorage.getItem('name') || ''
+    setUserName(n)
+  }, [])
+
   const [goals, setGoals] = useState<WeeklyGoals>(() => loadGoals(defaultEmail))
   const [weeklyEmissions, setWeeklyEmissions] = useState<{ label: string; value: number }[]>([])
   const [commutes, setCommutes] = useState<any[]>([])
@@ -155,7 +163,11 @@ export default function Home() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 20px' }}>
-      <h1 style={{ marginBottom: 8 }}>Welcome back to VerdeGO 🌿</h1>
+      <h1 style={{ marginBottom: 8 }}>
+        {userName
+          ? `Welcome to VerdeGO, ${userName} 🌿`
+          : 'Welcome back to VerdeGO 🌿'}
+      </h1>
       <p style={{ marginBottom: 24, color: '#555' }}>
         Track your weekly impact and celebrate the positive changes you're making.
       </p>
@@ -191,8 +203,22 @@ export default function Home() {
             </div>
 
             <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-              <button onClick={() => setCurrentIdx((currentIdx - 1 + affirmations.length) % affirmations.length)} style={pillButtonStyle}>◀ Prev</button>
-              <button onClick={() => setCurrentIdx((currentIdx + 1) % affirmations.length)} style={pillButtonStyle}>Next ▶</button>
+              <button
+                onClick={() =>
+                  setCurrentIdx((currentIdx - 1 + affirmations.length) % affirmations.length)
+                }
+                style={pillButtonStyle}
+              >
+                ◀ Prev
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentIdx((currentIdx + 1) % affirmations.length)
+                }
+                style={pillButtonStyle}
+              >
+                Next ▶
+              </button>
             </div>
           </>
         )}
@@ -244,4 +270,3 @@ const pillButtonStyle: React.CSSProperties = {
   cursor: 'pointer',
   fontSize: 12
 }
-

@@ -10,6 +10,10 @@ const router = Router();
 router.post(
   '/register',
   validate([
+    body('name')
+      .trim()
+      .isLength({ min: 1, max: 150 })
+      .withMessage('Name is required and must not exceed 150 characters'),
     body('email')
       .isEmail()
       .withMessage('Email must be valid')

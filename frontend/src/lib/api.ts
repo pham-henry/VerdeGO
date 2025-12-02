@@ -1,5 +1,5 @@
 // lib/api.ts
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+export const API = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 const DEFAULT_TIMEOUT = 7000 // ms
 
 export type Commute = {
@@ -18,7 +18,7 @@ export type EmissionByDay  = { series: DayPoint[] }
 
 type FetchOpts = { signal?: AbortSignal; timeoutMs?: number }
 
-async function fetchJSON<T>(
+export async function fetchJSON<T>(
   input: RequestInfo | URL,
   init: RequestInit = {},
   { signal, timeoutMs = DEFAULT_TIMEOUT }: FetchOpts = {}
@@ -125,3 +125,35 @@ export async function recommendRoute(payload: any, opts: FetchOpts = {}) {
   }, opts)
 }
 
+export type AuthResponse = {
+  accessToken: string
+  refreshToken: string
+  email: string
+  name?: string | null
+}
+
+type RegisterBody = {
+  name: string
+  email: string
+  password: string
+}
+
+type LoginBody = { email: string; password: string }
+
+// Login
+export async function loginUser(body: LoginBody ): Promise<AuthResponse> {
+  return fetchJSON(`${API}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+// Register
+export async function registerUser(body: RegisterBody): Promise<AuthResponse> {
+  return fetchJSON<AuthResponse>(`${API}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
