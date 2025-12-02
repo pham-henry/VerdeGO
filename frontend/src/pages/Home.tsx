@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { emissionSummaryByDay, getWeeklyGoals, listCommutes, WeeklyGoalResponse } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
 
 const FALLBACK_EMAIL = 'demo@user.com'
 
@@ -47,16 +48,25 @@ function normalizeGoalResponse(resp?: WeeklyGoalResponse | null): WeeklyGoals {
 
 // ---- Component ----
 export default function Home() {
-  // ---- Name (must be inside component) ----
+  // ---- Name ----
+  const {user} = useAuth()
   const [userName, setUserName] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string>(() => resolveUserEmail())
   const isGuest = userEmail === FALLBACK_EMAIL
 
   useEffect(() => {
-    const n = localStorage.getItem('name') || ''
-    setUserName(n)
+    if (user?.name) {
+      // prefer the server/auth value
+      setUserName(user.name)
+      localStorage.setItem('name', user.name)
+    } else {
+      // fallback to whatever was stored previously
+      const stored = localStorage.getItem('name') || ''
+      setUserName(stored)
+    }
+
     setUserEmail(resolveUserEmail())
-  }, [])
+  }, [user])
 
   const [goals, setGoals] = useState<WeeklyGoals>(() => loadGoals(resolveUserEmail()))
   const [weeklyEmissions, setWeeklyEmissions] = useState<{ label: string; value: number }[]>([])
