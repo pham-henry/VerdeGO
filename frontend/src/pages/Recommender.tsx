@@ -148,6 +148,7 @@ export default function Recommender() {
 
   useEffect(() => {
     const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    console.log("key: " + import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
     let mounted = true
 
     ;(async () => {
