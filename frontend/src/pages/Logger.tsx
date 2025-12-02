@@ -77,8 +77,17 @@ export default function Logger() {
           Date
           <input
             type="date"
+            max={new Date().toISOString().slice(0, 10)}
             value={form.date}
-            onChange={e => setForm({ ...form, date: e.target.value })}
+            onChange={e => {
+              const selected = e.target.value
+              const today = new Date().toISOString().slice(0, 10)
+
+              // prevent future dates
+              if (selected > today) return
+
+              setForm({ ...form, date: selected })
+            }}
           />
         </label>
 

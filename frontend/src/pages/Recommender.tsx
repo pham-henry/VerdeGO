@@ -304,11 +304,26 @@ export default function Recommender() {
 
   async function run(): Promise<void> {
   try {
-    setLoading(true)
-    setErrorMsg(null)
+    
+    if (!origin.trim() || !destination.trim()) {
+      setErrorMsg("Origin and destination cannot be empty.")
+      return
+    }
 
     const oPos = markers.current.origin?.getPosition?.()
     const dPos = markers.current.destination?.getPosition?.()
+
+    if (!oPos && !origin.trim()) {
+      setErrorMsg("Please enter or select an origin.")
+      return
+    }
+    if (!dPos && !destination.trim()) {
+      setErrorMsg("Please enter or select a destination.")
+      return
+    }
+    
+    setLoading(true)
+    setErrorMsg(null)
 
     const prefs = {
       ecoPriority,
@@ -510,7 +525,7 @@ export default function Recommender() {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <button
             onClick={run}
-            disabled={loading}
+            disabled={loading || !origin.trim() || !destination.trim()}
             style={{ height: 36 }}
           >
             {loading ? "Recommending…" : "Recommend"}
