@@ -1,186 +1,196 @@
-# VerdeGO - Carbon Footprint Tracker
+## VerdeGO – Carbon Footprint Tracker
 
-A full-stack application for tracking daily commutes and carbon footprint, built with React + Vite frontend and Express.js + PostgreSQL backend.
+Full‑stack app for logging daily commutes, tracking carbon footprint, and setting weekly sustainability goals.  
+Frontend: **React + Vite + TypeScript** · Backend: **Express + Prisma + PostgreSQL** · Deployed via **Docker Compose**.
 
-## Features
+### Core Features
+- **Secure auth**: Email/password signup and login with JWT access/refresh tokens.
+- **Protected app**: All API routes and pages (`/home`, `/logger`, `/tracker`, `/goals`, `/recommender`, `/account`) require login. Only `/auth`, `/login`, and `/register` are public.
+- **Commute logger**: Track mode, distance, duration, and notes for each commute.
+- **Emissions dashboard**: Visualize emissions over time and by mode on the home page.
+- **Weekly goals**: Per‑user weekly goals (zero‑emission km, emission cap, commute count) stored in Postgres and surfaced on Home + Goals pages.
+- **Route recommender**: Get eco‑friendly route suggestions (backend stubbed for CS160 demo).
 
-- **Daily Commute Logger**: Log your daily commutes with mode, distance, duration, and notes
-- **Carbon Footprint Tracker**: Visualize your emissions with charts (pie, line, bar) grouped by day, week, or mode
-- **Weekly Goals**: Set and track weekly goals for zero-emission distance, emission caps, and commute counts
-- **Transit Recommender**: Get route recommendations with eco-friendly, speed, and cost rankings
-- **Home Dashboard**: View weekly stats and positive impact affirmations
+### Tech Stack
+- **Frontend**: React 18, TypeScript, Vite, React Router, Recharts.
+- **Backend**: Node 20, Express + TypeScript, Prisma ORM, PostgreSQL 16, JWT.
+- **Infra/Tooling**: Docker & Docker Compose, pgAdmin (optional, dev profile).
 
-## Tech Stack
+---
 
-### Frontend
-- React 18 + TypeScript
-- Vite
-- React Router
-- Recharts for data visualization
+## Running the App with Docker (recommended)
 
-### Backend
-- Express.js + TypeScript
-- PostgreSQL 16
-- Prisma ORM
-- Docker & Docker Compose
+From the project root (`VerdeGO/`):
 
-## Quick Start
-
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 20+ (for local development)
-
-### Using Docker Compose (Recommended)
-
-1. **Start all services:**
+1. **Start all services**
    ```bash
    docker-compose up -d
    ```
 
-2. **Access the application:**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:8080
-   - pgAdmin (optional): http://localhost:5050 (use `--profile dev`)
+2. **URLs**
+   - Frontend: `http://localhost:5173`
+   - Backend API: `http://localhost:8080`
+   - Postgres: `localhost:5432`
+   - pgAdmin (dev profile): `http://localhost:5050`
 
-3. **Stop services:**
+3. **Apply database migrations inside backend container (first run only)**
+   ```bash
+   docker-compose exec backend npx prisma migrate deploy
+   ```
+
+4. **Rebuild images after code changes**
+   - Backend:
+     ```bash
+     docker-compose build backend
+     docker-compose up -d backend
+     ```
+   - Frontend:
+     ```bash
+     docker-compose build frontend
+     docker-compose up -d frontend
+     ```
+
+5. **Stop everything**
    ```bash
    docker-compose down
+   # or to also wipe DB data:
+   docker-compose down -v
    ```
 
-### Local Development
+---
 
-#### Backend Setup
+## Local Development (without full Docker stack)
 
-1. **Navigate to backend:**
-   ```bash
-   cd backend-express
-   ```
+### Backend (Express + Prisma)
 
-2. **Start PostgreSQL with Docker:**
-   ```bash
-   docker-compose up -d postgres
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-4. **Set up environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your settings
-   ```
-
-5. **Run migrations:**
-   ```bash
-   npm run migrate
-   ```
-
-6. **Start development server:**
-   ```bash
-   npm run dev
-   ```
-
-#### Frontend Setup
-
-1. **Navigate to frontend:**
-   ```bash
-   cd frontend
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Start development server:**
-   ```bash
-   npm run dev
-   ```
-
-## Environment Variables
-
-### Backend (.env)
-```env
-PORT=8080
-NODE_ENV=development
-DATABASE_URL=postgresql://verdego:verdego@localhost:5432/verdego?schema=public
-JWT_SECRET=change-me-dev-secret-at-least-256-bits
-JWT_ACCESS_EXP_MIN=30
-JWT_REFRESH_EXP_DAYS=7
-CORS_ORIGIN=http://localhost:5173
-GOOGLE_MAPS_API_KEY=your-google-maps-api-key
-```
-
-### Frontend (.env)
-```env
-VITE_API_URL=http://localhost:8080
-VITE_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
-```
-
-## API Endpoints
-
-### Commutes
-- `POST /api/commutes` - Create a commute
-- `GET /api/commutes?user_email=...&from=...&to=...` - List commutes
-- `DELETE /api/commutes/:id?user_email=...` - Delete a commute
-
-### Emissions
-- `GET /api/emissions/summary?user_email=...&groupBy=day|week|mode&from=...&to=...` - Get emission summary
-
-### Recommender
-- `POST /api/recommend` - Get route recommendations
-
-### Auth (existing)
-- `POST /api/auth/register` - Register user
-- `POST /api/auth/login` - Login
-- `POST /api/auth/refresh` - Refresh token
-
-## Project Structure
-
-```
-VerdeGO/
-├── backend-express/     # Express.js backend
-│   ├── src/
-│   │   ├── routes/     # API routes
-│   │   ├── services/   # Business logic
-│   │   ├── middleware/ # Express middleware
-│   │   └── server.ts   # Entry point
-│   ├── prisma/         # Database schema & migrations
-│   └── Dockerfile
-├── frontend/           # React + Vite frontend
-│   ├── src/
-│   │   ├── pages/      # Page components
-│   │   ├── lib/        # API client
-│   │   └── main.tsx    # Entry point
-│   └── Dockerfile
-└── docker-compose.yml  # Docker orchestration
-```
-
-## Database Migrations
-
-Run migrations:
 ```bash
 cd backend-express
-npm run migrate
+
+# 1. Start Postgres via Docker (DB only)
+docker-compose up -d postgres
+
+# 2. Install deps
+npm install
+
+# 3. Configure env
+cp .env.example .env
+# Edit .env as needed
+
+# 4. Run migrations (dev)
+npx prisma migrate dev
+
+# 5. Start dev server
+npm run dev
 ```
 
-## Development Tips
+Backend runs on `http://localhost:8080` and exposes `/api/*` routes.
 
-1. **Hot Reload**: Both frontend and backend support hot reload in development mode
-2. **Database Reset**: To reset the database, stop containers and remove volumes:
-   ```bash
-   docker-compose down -v
-   docker-compose up -d
-   ```
-3. **View Database**: Use Prisma Studio:
-   ```bash
-   cd backend-express
-   npm run studio
-   ```
+### Frontend (React + Vite)
 
-## License
+```bash
+cd frontend
 
-MIT (student project)
+# 1. Install deps
+npm install
 
+# 2. Configure env
+cp .env.example .env  # if you add one
+# Ensure VITE_API_URL matches backend, e.g.:
+# VITE_API_URL=http://localhost:8080
+
+# 3. Start dev server
+npm run dev
+```
+
+Frontend runs on `http://localhost:5173`.
+
+---
+
+## Auth & Route Protection
+
+- **Backend**
+  - Public: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`, `GET /api/health`.
+  - Protected (JWT required via `Authorization: Bearer <accessToken>`):  
+    `/api/users/*`, `/api/commutes/*`, `/api/emissions/*`, `/api/recommend`, `/api/goals/*`, `/api/test/*`.
+
+- **Frontend**
+  - Auth state is managed by `AuthContext` (`AuthProvider` + `useAuth()`).
+  - Public pages: `Auth.tsx` (`/` and `/auth`), `Login.tsx` (`/login`), `Register.tsx` (`/register`).
+  - Protected pages are wrapped in `RequireAuth` in `main.tsx`:
+    - `/home`, `/logger`, `/tracker`, `/goals`, `/recommender`, `/account`.
+  - On successful login/registration, the app stores tokens + user info in context and redirects to `/home`.
+
+---
+
+## Key API Endpoints (summary)
+
+- **Auth**
+  - `POST /api/auth/register` – create user, returns access + refresh tokens.
+  - `POST /api/auth/login` – login, returns access + refresh tokens.
+  - `POST /api/auth/refresh` – refresh access token.
+
+- **User**
+  - `GET /api/users/me` – get current user profile.
+  - `PATCH /api/users/me` – update profile (name).
+  - `POST /api/users/change-password` – change password.
+
+- **Commutes & Emissions**
+  - `POST /api/commutes`
+  - `GET /api/commutes?user_email=...&from=...&to=...`
+  - `DELETE /api/commutes/:id?user_email=...`
+  - `GET /api/emissions/summary?user_email=...&groupBy=day|mode&from=...&to=...`
+
+- **Weekly Goals**
+  - `GET /api/goals?user_email=...`
+  - `PUT /api/goals`
+  - `POST /api/goals/reset`
+
+- **Recommender**
+  - `POST /api/recommend`
+
+---
+
+## Project Structure (high‑level)
+
+```text
+VerdeGO/
+├── backend-express/
+│   ├── src/
+│   │   ├── routes/         # auth, users, commutes, emissions, recommender, goals
+│   │   ├── services/       # domain logic (auth, user, commute, emissions, goals)
+│   │   ├── middleware/     # auth, validation, error handler
+│   │   └── server.ts       # Express app setup
+│   ├── prisma/
+│   │   ├── schema.prisma   # User, Commute, WeeklyGoal, etc.
+│   │   └── migrations/
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   │   ├── pages/          # Auth, Login, Register, Home, Logger, Tracker, WeeklyGoals, etc.
+│   │   ├── components/     # RequireAuth, layout pieces
+│   │   ├── context/        # AuthContext
+│   │   ├── lib/            # API client helpers
+│   │   └── main.tsx        # Router + AuthProvider
+│   └── Dockerfile
+└── docker-compose.yml       # Orchestrates postgres, backend, frontend, pgAdmin
+```
+
+---
+
+## Useful Dev Commands
+
+- Prisma Studio (browse DB):
+  ```bash
+  cd backend-express
+  npx prisma studio
+  ```
+
+- Regenerate Prisma client after schema changes:
+  ```bash
+  cd backend-express
+  npx prisma generate
+  ```
+
+---
+
+_Student project for CS160 – MIT‑style license._
