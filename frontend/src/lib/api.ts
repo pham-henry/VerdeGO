@@ -31,10 +31,108 @@ export type WeeklyGoalPayload = {
 
 type FetchOpts = { signal?: AbortSignal; timeoutMs?: number }
 
+// Callback to notify AuthContext when tokens are refreshed
+let onTokenRefresh: ((tokens: AuthResponse) => void) | null = null
+
+export function setTokenRefreshCallback(callback: (tokens: AuthResponse) => void) {
+  onTokenRefresh = callback
+}
+
+// Helper to get access token from localStorage
+function getAccessToken(): string | null {
+  return localStorage.getItem('accessToken')
+}
+
+// Helper to get refresh token from localStorage
+function getRefreshToken(): string | null {
+  return localStorage.getItem('refreshToken')
+}
+
+// Global promise to handle concurrent refresh attempts (race condition prevention)
+let refreshPromise: Promise<AuthResponse | null> | null = null
+
+// Refresh the access token using the refresh token
+async function refreshAccessToken(): Promise<AuthResponse | null> {
+  // If a refresh is already in progress, wait for it
+  if (refreshPromise) {
+    return refreshPromise
+  }
+
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) {
+    return null
+  }
+
+  // Create the refresh promise
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      })
+
+      if (!response.ok) {
+        // Refresh failed - clear tokens and notify
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        if (onTokenRefresh) {
+          onTokenRefresh({
+            accessToken: '',
+            refreshToken: '',
+            email: '',
+            name: null
+          })
+        }
+        return null
+      }
+
+      const data: AuthResponse = await response.json()
+      
+      // Update localStorage
+      localStorage.setItem('accessToken', data.accessToken)
+      localStorage.setItem('refreshToken', data.refreshToken)
+      if (data.email) {
+        localStorage.setItem('email', data.email)
+      }
+      if (data.name) {
+        localStorage.setItem('name', data.name)
+      }
+
+      // Notify AuthContext
+      if (onTokenRefresh) {
+        onTokenRefresh(data)
+      }
+
+      return data
+    } catch (error) {
+      console.error('Token refresh failed:', error)
+      // Clear tokens on error
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      if (onTokenRefresh) {
+        onTokenRefresh({
+          accessToken: '',
+          refreshToken: '',
+          email: '',
+          name: null
+        })
+      }
+      return null
+    } finally {
+      // Clear the promise so future requests can refresh again
+      refreshPromise = null
+    }
+  })()
+
+  return refreshPromise
+}
+
 export async function fetchJSON<T>(
   input: RequestInfo | URL,
   init: RequestInit = {},
-  { signal, timeoutMs = DEFAULT_TIMEOUT }: FetchOpts = {}
+  { signal, timeoutMs = DEFAULT_TIMEOUT }: FetchOpts = {},
+  isRetry = false
 ): Promise<T> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(new Error(`Timeout ${timeoutMs}ms`)), timeoutMs)
@@ -45,8 +143,52 @@ export async function fetchJSON<T>(
     else signal.addEventListener('abort', onAbort, { once: true })
   }
 
+  // Automatically include Authorization header if token is available
+  const token = getAccessToken()
+  const headers = new Headers(init.headers || {})
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
   try {
-    const res = await fetch(input, { ...init, signal: controller.signal })
+    const res = await fetch(input, { 
+      ...init, 
+      headers,
+      signal: controller.signal 
+    })
+    
+    // Handle 401 Unauthorized - token expired
+    if (res.status === 401 && !isRetry) {
+      // Don't try to refresh if this is already a retry or if it's an auth endpoint
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('/api/auth/')) {
+        // Don't refresh on auth endpoints (login, register, refresh)
+        let detail: any = null
+        try { detail = await res.json() } catch {}
+        const msg = detail?.message || `HTTP ${res.status} ${res.statusText}`
+        throw new Error(msg)
+      }
+
+      // Try to refresh the token
+      const refreshed = await refreshAccessToken()
+      
+      if (refreshed && refreshed.accessToken) {
+        // Retry the original request with the new token
+        const newHeaders = new Headers(init.headers || {})
+        newHeaders.set('Authorization', `Bearer ${refreshed.accessToken}`)
+        
+        // Retry the request (recursive call with isRetry flag)
+        return fetchJSON<T>(input, {
+          ...init,
+          headers: newHeaders
+        }, { signal, timeoutMs }, true)
+      } else {
+        // Refresh failed - user needs to log in again
+        // Don't try to read response body as it may have been consumed
+        throw new Error('Session expired. Please log in again.')
+      }
+    }
+    
     if (!res.ok) {
       let detail: any = null
       try { detail = await res.json() } catch {}
@@ -189,4 +331,9 @@ export async function registerUser(body: RegisterBody): Promise<AuthResponse> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
+}
+
+// Refresh token (exposed for manual refresh if needed)
+export async function refreshToken(): Promise<AuthResponse | null> {
+  return refreshAccessToken()
 }

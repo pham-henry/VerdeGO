@@ -65,7 +65,7 @@ protectedRouter.use('/users', userRoutes);
 protectedRouter.use('/', commutesRoutes);
 protectedRouter.use('/', emissionsRoutes);
 protectedRouter.use('/', recommenderRoutes);
-protectedRouter.use('/goals', goalsRoutes);
+protectedRouter.use('/', goalsRoutes);
 protectedRouter.use('/test', testRoutes);
 app.use('/api', protectedRouter);
 

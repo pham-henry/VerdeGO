@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { AuthResponse } from '../lib/api'
+import { setTokenRefreshCallback } from '../lib/api'
 
 type AuthUser = {
   email: string
@@ -45,6 +46,29 @@ function readInitialState(): AuthState {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(() => readInitialState())
+
+  // Register token refresh callback to update state when tokens are refreshed
+  useEffect(() => {
+    setTokenRefreshCallback((tokens: AuthResponse) => {
+      if (tokens.accessToken && tokens.email) {
+        // Tokens were refreshed successfully
+        setState({
+          user: { email: tokens.email, name: tokens.name },
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          isAuthenticated: true
+        })
+      } else {
+        // Refresh failed - logout user
+        setState({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false
+        })
+      }
+    })
+  }, [])
 
   // Keep localStorage in sync when state changes
   useEffect(() => {
