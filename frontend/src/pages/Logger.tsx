@@ -9,9 +9,9 @@ export default function Logger() {
     date: new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/Los_Angeles"
     }).format(new Date()),   // <-- PST date (YYYY-MM-DD)
-    mode: '',
-    distance_km: 0,
-    duration_min: 0,
+    mode: 'walk',
+    distance_km: 1,
+    duration_min: 1,
     notes: ''
   });
 
@@ -88,9 +88,13 @@ export default function Logger() {
             value={form.mode}
             onChange={e => setForm({ ...form, mode: e.target.value })}
           >
-            <option>Walk</option><option>Bike</option><option>Scooter</option>
-            <option>Bus</option>
-            <option>Car (Gas)</option><option>Car (Hybrid)</option><option>Car (EV)</option>
+            <option value="walk">Walking</option>
+            <option value="bike">Biking</option>
+            <option value="scooter">Scooter</option>
+            <option value="bus">Bus</option>
+            <option value="car_gas">Car (Gas)</option>
+            <option value="car_hybrid">Car (Hybrid)</option>
+            <option value="car_ev">Car (Electric)</option>
           </select>
         </label>
 
