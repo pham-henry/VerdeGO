@@ -105,7 +105,7 @@ export default function Tracker() {
     for (const r of commutes) {
       if (!ZERO_EMISSION_MODES.includes(r.mode)) continue
 
-      // ✅ normalize to date-only so multiple trips on the same day are grouped
+      // normalize to date-only so multiple trips on the same day are grouped
       const d = (() => {
         try {
           return new Date(r.date).toISOString().slice(0, 10) // "YYYY-MM-DD"
@@ -152,130 +152,148 @@ export default function Tracker() {
   }
 
   return (
-    <div style={{ position: 'relative', minHeight: 400 }}>
+    <div style={container}>
       {/* buffering overlay */}
       {overlayVisible && (
         <div style={overlayStyle}>
           <div style={spinnerStyle} aria-label="Loading" />
-          <div style={{ marginTop: 12, fontWeight: 600 }}>Loading…</div>
+          <div style={overlayText}>Loading your carbon footprint data…</div>
         </div>
       )}
 
-      <h2>Carbon Footprint Tracker</h2>
+      <div style={headerSection}>
+        <h2 style={title}>Carbon Footprint Tracker</h2>
+        <p style={subtitle}>
+          Visualize your emissions by mode and track your environmental impact over time.
+        </p>
+      </div>
 
       {/* Only render the rest once the active view's data is ready */}
       {activeReady && (
         <>
           {/* View switch */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', margin: '8px 0 16px' }}>
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <div style={viewToggleSection}>
+            <label style={toggleLabel}>
               <input
                 type="checkbox"
                 checked={showZeroView}
                 onChange={(e) => onToggleZeroView(e.target.checked)}
+                style={toggleCheckbox}
               />
-              Show zero-emission distance view
+              <span style={toggleText}>Show zero-emission distance view</span>
             </label>
           </div>
 
           {!showZeroView ? (
             <>
-              <p>
-                Total emissions from your logged commutes:&nbsp;
-                <b>{total.toFixed(2)} kg CO₂e</b>
-              </p>
+              <div style={summaryCard}>
+                <div style={summaryLabel}>Total Emissions</div>
+                <div style={summaryValue}>{total.toFixed(2)} kg CO₂e</div>
+                <div style={summaryHint}>From all logged commutes</div>
+              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+              <div style={chartsGrid}>
                 {/* Emissions by mode (pie) */}
-                <div style={{ height: 300 }}>
-                  <h3>By Mode (excluding zero-emission)</h3>
-                  <ResponsiveContainer>
-                    <PieChart>
-                      <Pie
-                        data={byMode}
-                        dataKey="value"
-                        nameKey="label"
-                        outerRadius={90}
-                        labelLine={false}
-                        label={false}
-                      >
-                        {byMode.map((entry, idx) => {
-                          const color = MODE_COLORS[entry.label] || MODE_COLORS.other
-                          return <Cell key={`cell-${idx}`} fill={color} />
-                        })}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div style={chartCard}>
+                  <h3 style={chartTitle}>Emissions by Mode</h3>
+                  <div style={chartContainer}>
+                    <ResponsiveContainer>
+                      <PieChart>
+                        <Pie
+                          data={byMode}
+                          dataKey="value"
+                          nameKey="label"
+                          outerRadius={100}
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {byMode.map((entry, idx) => {
+                            const color = MODE_COLORS[entry.label] || MODE_COLORS.other
+                            return <Cell key={`cell-${idx}`} fill={color} />
+                          })}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
                 {/* Emissions daily trend */}
-                <div style={{ height: 300 }}>
-                  <h3>Daily Emissions Trend</h3>
-                  <ResponsiveContainer>
-                    <LineChart data={byDay}>
-                      <XAxis dataKey="label" hide />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="value" stroke="#4CAF50" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <div style={chartCard}>
+                  <h3 style={chartTitle}>Daily Emissions Trend</h3>
+                  <div style={chartContainer}>
+                    <ResponsiveContainer>
+                      <LineChart data={byDay}>
+                        <XAxis dataKey="label" />
+                        <YAxis />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="value" stroke="#4CAF50" strokeWidth={3} dot={{ fill: '#4CAF50', r: 4 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
 
               {/* Emissions table */}
-              <div style={{ marginTop: 60 }}>
-                <h3>Emission Breakdown by Mode</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#f3f3f3', borderBottom: '2px solid #ccc' }}>
-                      <th style={{ textAlign: 'left', padding: '10px 12px' }}>Mode</th>
-                      <th style={{ textAlign: 'right', padding: '10px 12px' }}>Emissions (kg CO₂e)</th>
-                      <th style={{ textAlign: 'right', padding: '10px 12px' }}>Share of Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {byMode.map((m, i) => {
-                      const pct = total > 0 ? (m.value / total) * 100 : 0
-                      const color = MODE_COLORS[m.label] || MODE_COLORS.other
-                      return (
-                        <tr key={i} style={{ borderTop: '1px solid #ddd' }}>
-                          <td style={{ padding: '8px 12px', color }}>{m.label}</td>
-                          <td style={{ textAlign: 'right', padding: '8px 12px' }}>{m.value.toFixed(3)}</td>
-                          <td style={{ textAlign: 'right', padding: '8px 12px' }}>{pct.toFixed(1)}%</td>
-                        </tr>
-                      )
-                    })}
-                    {byMode.length === 0 && (
+              <div style={tableSection}>
+                <h3 style={tableTitle}>Emission Breakdown by Mode</h3>
+                <div style={tableWrapper}>
+                  <table style={table}>
+                    <thead>
                       <tr>
-                        <td colSpan={3} style={{ textAlign: 'center', padding: 12, opacity: .6 }}>
-                          No emission data yet — all your commutes are zero-emission 🌱
-                        </td>
+                        <th style={th}>Mode</th>
+                        <th style={{ ...th, textAlign: 'right' }}>Emissions (kg CO₂e)</th>
+                        <th style={{ ...th, textAlign: 'right' }}>Share of Total</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {byMode.map((m, i) => {
+                        const pct = total > 0 ? (m.value / total) * 100 : 0
+                        const color = MODE_COLORS[m.label] || MODE_COLORS.other
+                        return (
+                          <tr key={i} style={tableRow}>
+                            <td style={{ ...tableCell, color, fontWeight: 600 }}>{m.label}</td>
+                            <td style={{ ...tableCell, textAlign: 'right' }}>{m.value.toFixed(3)}</td>
+                            <td style={{ ...tableCell, textAlign: 'right' }}>{pct.toFixed(1)}%</td>
+                          </tr>
+                        )
+                      })}
+                      {byMode.length === 0 && (
+                        <tr>
+                          <td colSpan={3} style={emptyState}>
+                            <div style={emptyStateContent}>
+                              <p>No emission data yet — all your commutes are zero-emission!</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </>
           ) : (
             /* Zero-emission distance view */
             <>
-              <p>
-                Total <b>zero-emission distance</b> (walk + bike):&nbsp;
-                <b>{zeroDistance.totalKm.toFixed(2)} km</b>
-              </p>
+              <div style={summaryCard}>
+                <div style={summaryLabel}>Total Zero-Emission Distance</div>
+                <div style={{ ...summaryValue, color: 'var(--verdego-dark)' }}>{zeroDistance.totalKm.toFixed(2)} km</div>
+                <div style={summaryHint}>Walk + Bike distances</div>
+              </div>
 
-              <div style={{ height: 340 }}>
-                <h3>Zero-Emission Distance by Day</h3>
-                <ResponsiveContainer>
-                  <LineChart data={zeroDistance.series}>
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="value" stroke="#2E7D32" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
+              <div style={chartCard}>
+                <h3 style={chartTitle}>Zero-Emission Distance by Day</h3>
+                <div style={{ ...chartContainer, height: 360 }}>
+                  <ResponsiveContainer>
+                    <LineChart data={zeroDistance.series}>
+                      <XAxis dataKey="label" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="value" stroke="#2E7D32" strokeWidth={3} dot={{ fill: '#2E7D32', r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </>
           )}
@@ -285,25 +303,207 @@ export default function Tracker() {
   )
 }
 
+/* --- Styles --- */
+const container: React.CSSProperties = {
+  position: 'relative',
+  minHeight: 400,
+  maxWidth: 1200,
+  margin: '0 auto',
+}
+
+const headerSection: React.CSSProperties = {
+  marginBottom: 'var(--spacing-xl)',
+}
+
+const title: React.CSSProperties = {
+  fontSize: '2rem',
+  fontWeight: 700,
+  marginBottom: 'var(--spacing-sm)',
+  background: 'linear-gradient(135deg, var(--verdego-green), var(--verdego-dark))',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
+}
+
+const subtitle: React.CSSProperties = {
+  fontSize: '1rem',
+  color: 'var(--text-secondary)',
+  marginBottom: 0,
+  lineHeight: 1.5,
+}
+
+const viewToggleSection: React.CSSProperties = {
+  marginBottom: 'var(--spacing-xl)',
+  padding: 'var(--spacing-md)',
+  backgroundColor: 'var(--bg-white)',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border-light)',
+}
+
+const toggleLabel: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 'var(--spacing-md)',
+  cursor: 'pointer',
+  fontSize: '15px',
+  fontWeight: 500,
+}
+
+const toggleCheckbox: React.CSSProperties = {
+  width: '20px',
+  height: '20px',
+  cursor: 'pointer',
+}
+
+const toggleText: React.CSSProperties = {
+  color: 'var(--text-primary)',
+}
+
+const summaryCard: React.CSSProperties = {
+  backgroundColor: 'var(--bg-white)',
+  borderRadius: 'var(--radius-lg)',
+  padding: 'var(--spacing-xl)',
+  marginBottom: 'var(--spacing-xl)',
+  boxShadow: 'var(--shadow-md)',
+  border: '1px solid var(--border-light)',
+  textAlign: 'center',
+}
+
+const summaryLabel: React.CSSProperties = {
+  fontSize: '14px',
+  fontWeight: 600,
+  color: 'var(--text-secondary)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  marginBottom: 'var(--spacing-sm)',
+}
+
+const summaryValue: React.CSSProperties = {
+  fontSize: '2.5rem',
+  fontWeight: 700,
+  color: 'var(--color-primary)',
+  marginBottom: 'var(--spacing-xs)',
+}
+
+const summaryHint: React.CSSProperties = {
+  fontSize: '14px',
+  color: 'var(--text-tertiary)',
+}
+
+const chartsGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+  gap: 'var(--spacing-xl)',
+  marginBottom: 'var(--spacing-xl)',
+}
+
+const chartCard: React.CSSProperties = {
+  backgroundColor: 'var(--bg-white)',
+  borderRadius: 'var(--radius-lg)',
+  padding: 'var(--spacing-xl)',
+  boxShadow: 'var(--shadow-md)',
+  border: '1px solid var(--border-light)',
+}
+
+const chartTitle: React.CSSProperties = {
+  fontSize: '1.25rem',
+  fontWeight: 600,
+  marginBottom: 'var(--spacing-lg)',
+  color: 'var(--text-primary)',
+}
+
+const chartContainer: React.CSSProperties = {
+  height: 320,
+  width: '100%',
+}
+
+const tableSection: React.CSSProperties = {
+  backgroundColor: 'var(--bg-white)',
+  borderRadius: 'var(--radius-lg)',
+  padding: 'var(--spacing-xl)',
+  boxShadow: 'var(--shadow-md)',
+  border: '1px solid var(--border-light)',
+  marginTop: 'var(--spacing-xl)',
+}
+
+const tableTitle: React.CSSProperties = {
+  fontSize: '1.25rem',
+  fontWeight: 600,
+  marginBottom: 'var(--spacing-lg)',
+  color: 'var(--text-primary)',
+}
+
+const tableWrapper: React.CSSProperties = {
+  overflowX: 'auto',
+}
+
+const table: React.CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+}
+
+const th: React.CSSProperties = {
+  textAlign: 'left',
+  padding: 'var(--spacing-md)',
+  fontSize: '12px',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  color: 'var(--text-secondary)',
+  borderBottom: '2px solid var(--border-light)',
+  backgroundColor: 'var(--bg-light)',
+}
+
+const tableRow: React.CSSProperties = {
+  borderBottom: '1px solid var(--border-light)',
+}
+
+const tableCell: React.CSSProperties = {
+  padding: 'var(--spacing-md)',
+  fontSize: '14px',
+  color: 'var(--text-primary)',
+}
+
+const emptyState: React.CSSProperties = {
+  padding: 'var(--spacing-2xl)',
+  textAlign: 'center',
+}
+
+const emptyStateContent: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 'var(--spacing-md)',
+  color: 'var(--text-tertiary)',
+}
+
 /* --- overlay + spinner styles --- */
 const overlayStyle: React.CSSProperties = {
   position: 'absolute',
   inset: 0,
-  background:'#E8F5E9',
+  background: 'rgba(232, 245, 233, 0.95)',
+  backdropFilter: 'blur(4px)',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  zIndex: 20
+  zIndex: 20,
+  borderRadius: 'var(--radius-lg)',
 }
 
 const spinnerStyle: React.CSSProperties = {
-  width: 32,
-  height: 32,
+  width: 48,
+  height: 48,
   borderRadius: '50%',
-  border: '4px solid rgba(0,0,0,0.1)',
+  border: '4px solid rgba(76, 175, 80, 0.2)',
   borderTopColor: '#4CAF50',
-  animation: 'verdego-spin 0.9s linear infinite'
+  animation: 'spin 0.9s linear infinite',
+}
+
+const overlayText: React.CSSProperties = {
+  marginTop: 'var(--spacing-md)',
+  fontWeight: 600,
+  color: 'var(--text-secondary)',
+  fontSize: '16px',
 }
 
 const styleEl = typeof document !== 'undefined' ? document.createElement('style') : null

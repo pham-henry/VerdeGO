@@ -160,12 +160,14 @@ export default function WeeklyGoals() {
   }, [loading, saving, savedAt])
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: '16px 20px' }}>
-      <h2>Weekly Goal Setter</h2>
-      <p style={{ marginBottom: 24, color: '#555' }}>
-        Tune your weekly eco-commute goals using the sliders below. VerdeGO will use these targets to
-        affirm your impact on the home page.
-      </p>
+    <div style={container}>
+      <div style={headerSection}>
+        <h2 style={title}>Weekly Goal Setter</h2>
+        <p style={subtitle}>
+          Customize your weekly eco-commute goals using the sliders below. VerdeGO will use these targets to
+          affirm your impact on the home page.
+        </p>
+      </div>
 
       {/* Zero-emission distance */}
       <GoalBlock
@@ -213,23 +215,23 @@ export default function WeeklyGoals() {
       </GoalBlock>
 
       {/* Actions */}
-      <div style={{ marginTop: 24, display: 'flex', gap: 12 }}>
+      <div style={actions}>
         <button type="button" style={primaryBtn} onClick={onSave} disabled={saving || loading}>
-          Save goals
+          {saving ? 'Saving...' : 'Save Goals'}
         </button>
         <button type="button" style={secondaryBtn} onClick={onReset} disabled={saving || loading}>
-          Reset to suggested
+          Reset to Default
         </button>
       </div>
 
       {error && (
-        <div style={{ marginTop: 12, fontSize: 12, color: '#B71C1C', background: '#FFEBEE', padding: '8px 12px', borderRadius: 8 }}>
+        <div style={errorBox}>
           {error}
         </div>
       )}
 
       {status && !error && (
-        <div style={{ marginTop: 8, fontSize: 12, color: '#777' }}>
+        <div style={statusBox}>
           {status}
         </div>
       )}
@@ -239,17 +241,9 @@ export default function WeeklyGoals() {
 
 function GoalBlock(props: { title: string; description: string; children: React.ReactNode }) {
   return (
-    <section
-      style={{
-        borderRadius: 12,
-        border: '1px solid #E0E0E0',
-        padding: 16,
-        marginBottom: 16,
-        background: '#FAFAFA'
-      }}
-    >
-      <h3 style={{ margin: '0 0 4px' }}>{props.title}</h3>
-      <p style={{ margin: '0 0 12px', fontSize: 13, color: '#666' }}>{props.description}</p>
+    <section style={goalBlock}>
+      <h3 style={goalBlockTitle}>{props.title}</h3>
+      <p style={goalBlockDescription}>{props.description}</p>
       {props.children}
     </section>
   )
@@ -263,40 +257,168 @@ function SliderRow(props: {
   unit?: string
   onChange: (v: number) => void
 }) {
+  const percentage = ((props.value - props.min) / (props.max - props.min)) * 100
+  
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <input
-        type="range"
-        min={props.min}
-        max={props.max}
-        step={props.step}
-        value={props.value}
-        onChange={e => props.onChange(Number(e.target.value))}
-        style={{ flex: 1 }}
-      />
-      <div style={{ minWidth: 70, textAlign: 'right', fontWeight: 600 }}>
-        {props.value} {props.unit}
+    <div style={sliderContainer}>
+      <div style={sliderWrapper}>
+        <input
+          type="range"
+          min={props.min}
+          max={props.max}
+          step={props.step}
+          value={props.value}
+          onChange={e => props.onChange(Number(e.target.value))}
+          style={slider}
+        />
+      </div>
+      <div style={sliderValue}>
+        <span style={sliderValueNumber}>{props.value}</span>
+        <span style={sliderValueUnit}> {props.unit}</span>
       </div>
     </div>
   )
 }
 
+const container: React.CSSProperties = {
+  maxWidth: 900,
+  margin: '0 auto',
+  padding: 'var(--spacing-lg)',
+}
+
+const headerSection: React.CSSProperties = {
+  marginBottom: 'var(--spacing-xl)',
+}
+
+const title: React.CSSProperties = {
+  fontSize: '2rem',
+  fontWeight: 700,
+  marginBottom: 'var(--spacing-sm)',
+  background: 'linear-gradient(135deg, var(--verdego-green), var(--verdego-dark))',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
+}
+
+const subtitle: React.CSSProperties = {
+  fontSize: '1rem',
+  color: 'var(--text-secondary)',
+  marginBottom: 0,
+  lineHeight: 1.6,
+}
+
+const goalBlock: React.CSSProperties = {
+  borderRadius: 'var(--radius-lg)',
+  border: '1px solid var(--border-light)',
+  padding: 'var(--spacing-lg)',
+  marginBottom: 'var(--spacing-lg)',
+  background: 'var(--bg-white)',
+  boxShadow: 'var(--shadow-sm)',
+  transition: 'all var(--transition-base)',
+}
+
+const goalBlockTitle: React.CSSProperties = {
+  margin: '0 0 var(--spacing-xs)',
+  fontSize: '1.1rem',
+  fontWeight: 600,
+  color: 'var(--text-primary)',
+}
+
+const goalBlockDescription: React.CSSProperties = {
+  margin: '0 0 var(--spacing-md)',
+  fontSize: '14px',
+  color: 'var(--text-secondary)',
+  lineHeight: 1.5,
+}
+
+const sliderContainer: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--spacing-md)',
+}
+
+const sliderWrapper: React.CSSProperties = {
+  flex: 1,
+  position: 'relative',
+}
+
+const slider: React.CSSProperties = {
+  width: '100%',
+  height: '8px',
+  borderRadius: 'var(--radius-full)',
+  background: 'var(--border-light)',
+  outline: 'none',
+  appearance: 'none',
+  cursor: 'pointer',
+}
+
+const sliderValue: React.CSSProperties = {
+  minWidth: '80px',
+  textAlign: 'right',
+  fontSize: '1.25rem',
+  fontWeight: 700,
+  color: 'var(--color-primary)',
+}
+
+const sliderValueNumber: React.CSSProperties = {
+  fontSize: '1.5rem',
+}
+
+const sliderValueUnit: React.CSSProperties = {
+  fontSize: '1rem',
+  fontWeight: 500,
+  opacity: 0.8,
+}
+
+const actions: React.CSSProperties = {
+  marginTop: 'var(--spacing-xl)',
+  display: 'flex',
+  gap: 'var(--spacing-md)',
+  flexWrap: 'wrap',
+}
+
 const primaryBtn: React.CSSProperties = {
-  padding: '8px 16px',
-  borderRadius: 999,
+  padding: 'var(--spacing-md) var(--spacing-xl)',
+  borderRadius: 'var(--radius-md)',
   border: 'none',
-  background: '#4CAF50',
+  background: 'var(--color-primary)',
   color: '#fff',
   fontWeight: 600,
-  cursor: 'pointer'
+  cursor: 'pointer',
+  fontSize: '15px',
+  transition: 'all var(--transition-fast)',
+  boxShadow: 'var(--shadow-md)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--spacing-xs)',
 }
 
 const secondaryBtn: React.CSSProperties = {
-  padding: '8px 16px',
-  borderRadius: 999,
-  border: '1px solid #BDBDBD',
-  background: '#FFFFFF',
-  color: '#555',
-  cursor: 'pointer'
+  padding: 'var(--spacing-md) var(--spacing-xl)',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border-light)',
+  background: 'var(--bg-white)',
+  color: 'var(--text-secondary)',
+  cursor: 'pointer',
+  fontSize: '15px',
+  fontWeight: 500,
+  transition: 'all var(--transition-fast)',
+}
+
+const errorBox: React.CSSProperties = {
+  marginTop: 'var(--spacing-md)',
+  fontSize: '14px',
+  color: '#B71C1C',
+  background: '#FFEBEE',
+  padding: 'var(--spacing-md)',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid #EF5350',
+}
+
+const statusBox: React.CSSProperties = {
+  marginTop: 'var(--spacing-md)',
+  fontSize: '14px',
+  color: 'var(--text-secondary)',
+  padding: 'var(--spacing-sm)',
 }
 
