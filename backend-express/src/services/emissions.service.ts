@@ -4,7 +4,6 @@ const EMISSION_FACTORS: Record<string, number> = {
   bike: 0.0,
   scooter: 0.021,
   bus: 0.105,
-  train: 0.041,
   car_gas: 0.192,
   car_hybrid: 0.120,
   car_ev: 0.050,

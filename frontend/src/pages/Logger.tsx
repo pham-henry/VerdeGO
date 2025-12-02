@@ -7,9 +7,9 @@ export default function Logger() {
   const [form, setForm] = useState<Commute>({
     user_email: defaultEmail,
     date: new Date().toISOString().slice(0, 10),
-    mode: 'bike',
-    distance_km: 3,
-    duration_min: 12,
+    mode: '',
+    distance_km: 0,
+    duration_min: 0,
     notes: ''
   })
 
@@ -87,7 +87,7 @@ export default function Logger() {
             onChange={e => setForm({ ...form, mode: e.target.value })}
           >
             <option>walk</option><option>bike</option><option>scooter</option>
-            <option>bus</option><option>train</option>
+            <option>bus</option>
             <option>car_gas</option><option>car_hybrid</option><option>car_ev</option>
           </select>
         </label>

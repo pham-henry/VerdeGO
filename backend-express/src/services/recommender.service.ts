@@ -147,7 +147,7 @@ export class RecommenderService {
       }
     }
 
-    // Generate options for all modes (train removed)
+    // Generate options for all modes
     const options: RouteOption[] = [];
     const modes = ['walk', 'bike', 'scooter', 'bus', 'car_gas', 'car_hybrid', 'car_ev'];
 

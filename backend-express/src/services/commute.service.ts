@@ -26,8 +26,7 @@ export class CommuteService {
   async getOrCreateUser(email: string) {
     let user = await userService.findByEmail(email);
     if (!user) {
-      // Create a demo user with a default password hash
-      // In production, you'd want proper user creation flow
+      //safety for demo
       const defaultPasswordHash = await bcrypt.hash('demo', 12);
       user = await prisma.user.create({
         data: {
