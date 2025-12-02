@@ -7,15 +7,22 @@ export const prisma = new PrismaClient({
       : ['error'],
 });
 
-// Handle database connection
-prisma.$connect().catch((error) => {
-  console.error('Failed to connect to database:', error);
-  process.exit(1);
-});
+// Lazy connection - Prisma will connect automatically on first query
+// This prevents connection errors from crashing the server on startup
 
 // Graceful shutdown
 process.on('beforeExit', async () => {
   await prisma.$disconnect();
+});
+
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
 });
 
 

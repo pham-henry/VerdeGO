@@ -11,6 +11,11 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): Response | void => {
+  // Prevent crash if response already sent
+  if (res.headersSent) {
+    return next(err);
+  }
+
   console.error('Error:', {
     error: err.message,
     stack: err.stack,
@@ -41,6 +46,40 @@ export const errorHandler = (
   } else if (err.name === 'TokenExpiredError') {
     statusCode = 401;
     errorMessage = 'Token expired';
+  } else if (err.name === 'PrismaClientKnownRequestError' || (err as any).code?.startsWith('P')) {
+    // Handle Prisma database errors
+    const prismaError = err as any;
+    console.error('Prisma Error:', {
+      code: prismaError.code,
+      meta: prismaError.meta,
+      message: prismaError.message,
+    });
+    
+    if (prismaError.code === 'P2002') {
+      statusCode = 409;
+      errorMessage = 'A record with this value already exists';
+    } else if (prismaError.code === 'P2025') {
+      statusCode = 404;
+      errorMessage = 'Record not found';
+    } else if (prismaError.code === 'P1001' || prismaError.code === 'P1017') {
+      statusCode = 503;
+      errorMessage = 'Database connection error. Please try again later.';
+    } else {
+      statusCode = 500;
+      errorMessage = 'Database error occurred';
+      console.error('Full Prisma error:', prismaError);
+    }
+  } else if (err.name === 'PrismaClientInitializationError') {
+    statusCode = 503;
+    errorMessage = 'Database connection failed. Please check your database configuration.';
+    console.error('Prisma initialization error:', err);
+  } else {
+    // Log unexpected errors with full details
+    console.error('Unexpected error details:', {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+    });
   }
 
   const errorResponse: ErrorResponse = {
@@ -52,7 +91,12 @@ export const errorHandler = (
     path: req.path,
   };
 
-  res.status(statusCode).json(errorResponse);
+  try {
+    res.status(statusCode).json(errorResponse);
+  } catch (responseError) {
+    // If we can't send response, log and don't crash
+    console.error('Failed to send error response:', responseError);
+  }
 };
 
 function getErrorType(statusCode: number): string {

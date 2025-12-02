@@ -48,6 +48,7 @@ COPY --from=build /app/dist ./dist
 EXPOSE 8080
 
 # Run database migrations and start server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+# Log migration status for better debugging
+CMD ["sh", "-c", "echo '🚀 Starting VerdeGO backend...' && echo '📦 Running database migrations...' && npx prisma migrate deploy && echo '✅ Migrations completed successfully' && echo '🌐 Starting server...' && node dist/server.js"]
 
 
