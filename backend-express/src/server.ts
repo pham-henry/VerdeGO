@@ -10,6 +10,7 @@ import commutesRoutes from './routes/commutes.routes';
 import emissionsRoutes from './routes/emissions.routes';
 import recommenderRoutes from './routes/recommender.routes';
 import testRoutes from './routes/test.routes';
+import goalsRoutes from './routes/goals.routes';
 
 // Load environment variables
 dotenv.config();
@@ -59,6 +60,7 @@ app.use('/api/users', userRoutes);
 app.use('/api', commutesRoutes);
 app.use('/api', emissionsRoutes);
 app.use('/api', recommenderRoutes);
+app.use('/api', goalsRoutes);
 app.use('/api/test', testRoutes);
 
 // Error handling middleware (must be last)

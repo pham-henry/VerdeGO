@@ -15,6 +15,19 @@ export type Commute = {
 export type DayPoint = { label: string; value: number }
 export type EmissionByMode = { by_mode_kg: Record<string, number> }
 export type EmissionByDay  = { series: DayPoint[] }
+export type WeeklyGoalResponse = {
+  user_email: string
+  weeklyZeroKm: number
+  weeklyEmissionCapKg: number
+  weeklyCommuteCount: number
+  updatedAt?: string
+}
+export type WeeklyGoalPayload = {
+  user_email: string
+  weeklyZeroKm: number
+  weeklyEmissionCapKg: number
+  weeklyCommuteCount: number
+}
 
 type FetchOpts = { signal?: AbortSignal; timeoutMs?: number }
 
@@ -122,6 +135,26 @@ export async function recommendRoute(payload: any, opts: FetchOpts = {}) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+  }, opts)
+}
+
+export async function getWeeklyGoals(user_email: string, opts: FetchOpts = {}) {
+  return fetchJSON<WeeklyGoalResponse>(`${API}/api/goals${qs({ user_email })}`, {}, opts)
+}
+
+export async function saveWeeklyGoals(payload: WeeklyGoalPayload, opts: FetchOpts = {}) {
+  return fetchJSON<WeeklyGoalResponse>(`${API}/api/goals`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }, opts)
+}
+
+export async function resetWeeklyGoals(user_email: string, opts: FetchOpts = {}) {
+  return fetchJSON<WeeklyGoalResponse>(`${API}/api/goals/reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_email })
   }, opts)
 }
 

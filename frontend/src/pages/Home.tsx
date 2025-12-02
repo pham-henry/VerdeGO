@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { emissionSummaryByDay, listCommutes } from '../lib/api'
+import { emissionSummaryByDay, getWeeklyGoals, listCommutes, WeeklyGoalResponse } from '../lib/api'
 
-const defaultEmail = 'demo@user.com'
+const FALLBACK_EMAIL = 'demo@user.com'
 
 // ---- Goal Storage ----
 const GOAL_STORAGE_KEY = (email: string) => `verdego:goals:${email}`
@@ -28,17 +28,37 @@ function loadGoals(email: string): WeeklyGoals {
   }
 }
 
+function saveGoals(email: string, goals: WeeklyGoals) {
+  localStorage.setItem(GOAL_STORAGE_KEY(email), JSON.stringify(goals))
+}
+
+function resolveUserEmail() {
+  return localStorage.getItem('email')?.trim() || FALLBACK_EMAIL
+}
+
+function normalizeGoalResponse(resp?: WeeklyGoalResponse | null): WeeklyGoals {
+  if (!resp) return defaultGoals
+  return {
+    weeklyZeroKm: resp.weeklyZeroKm ?? defaultGoals.weeklyZeroKm,
+    weeklyEmissionCapKg: resp.weeklyEmissionCapKg ?? defaultGoals.weeklyEmissionCapKg,
+    weeklyCommuteCount: resp.weeklyCommuteCount ?? defaultGoals.weeklyCommuteCount
+  }
+}
+
 // ---- Component ----
 export default function Home() {
   // ---- Name (must be inside component) ----
   const [userName, setUserName] = useState<string>('')
+  const [userEmail, setUserEmail] = useState<string>(() => resolveUserEmail())
+  const isGuest = userEmail === FALLBACK_EMAIL
 
   useEffect(() => {
     const n = localStorage.getItem('name') || ''
     setUserName(n)
+    setUserEmail(resolveUserEmail())
   }, [])
 
-  const [goals, setGoals] = useState<WeeklyGoals>(() => loadGoals(defaultEmail))
+  const [goals, setGoals] = useState<WeeklyGoals>(() => loadGoals(resolveUserEmail()))
   const [weeklyEmissions, setWeeklyEmissions] = useState<{ label: string; value: number }[]>([])
   const [commutes, setCommutes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -62,8 +82,8 @@ export default function Home() {
     setLoading(true)
 
     Promise.all([
-      emissionSummaryByDay({ user_email: defaultEmail, from, to }),
-      listCommutes({ user_email: defaultEmail, from, to })
+      emissionSummaryByDay({ user_email: userEmail, from, to }),
+      listCommutes({ user_email: userEmail, from, to })
     ])
       .then(([emRes, commuteRes]) => {
         if (cancelled) return
@@ -79,12 +99,34 @@ export default function Home() {
       .finally(() => !cancelled && setLoading(false))
 
     // load goals again on mount
-    setGoals(loadGoals(defaultEmail))
+    setGoals(loadGoals(userEmail))
 
     return () => {
       cancelled = true
     }
-  }, [from, to])
+  }, [from, to, userEmail])
+
+  useEffect(() => {
+    if (isGuest) {
+      setGoals(loadGoals(userEmail))
+      return
+    }
+
+    let cancelled = false
+    getWeeklyGoals(userEmail)
+      .then(resp => {
+        if (cancelled) return
+        const normalized = normalizeGoalResponse(resp)
+        setGoals(normalized)
+        saveGoals(userEmail, normalized)
+      })
+      .catch(err => {
+        if (!cancelled) console.error('Failed to sync weekly goals for home', err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [userEmail, isGuest])
 
   // ---- Derived Stats ----
   const stats = useMemo(() => {
