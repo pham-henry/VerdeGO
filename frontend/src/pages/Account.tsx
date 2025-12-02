@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { API, fetchJSON } from '../lib/api' 
+import { API, fetchJSON } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 
 export default function Account() {
   const navigate = useNavigate()
-  const { user, accessToken, logout } = useAuth()
+  const { user, updateUser, accessToken, logout } = useAuth()
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -31,7 +31,6 @@ export default function Account() {
     setSavingProfile(true)
 
     try {
-      // adjust endpoint/method to match your backend
       await fetchJSON(`${API}/api/users/me`, {
         method: 'PATCH',
         headers: {
@@ -41,7 +40,9 @@ export default function Account() {
         body: JSON.stringify({ name })
       })
 
-      localStorage.setItem('name', name) //update name locally
+  
+      updateUser({ name })
+
       setMessage('Profile updated successfully.')
     } catch (err: any) {
       setError(err?.message || 'Failed to update profile.')

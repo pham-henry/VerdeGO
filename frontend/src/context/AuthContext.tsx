@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback
+} from 'react'
 import type { AuthResponse } from '../lib/api'
 
 type AuthUser = {
@@ -16,6 +23,7 @@ type AuthState = {
 type AuthContextValue = AuthState & {
   login: (payload: AuthResponse) => void
   logout: () => void
+  updateUser: (partial: Partial<AuthUser>) => void // 👈 new
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -36,7 +44,7 @@ function readInitialState(): AuthState {
   }
 
   return {
-    user: { email, name: name ?? undefined },
+    user: { email, name: name ?? null },
     accessToken,
     refreshToken,
     isAuthenticated: true
@@ -46,16 +54,22 @@ function readInitialState(): AuthState {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(() => readInitialState())
 
-  // Keep localStorage in sync when state changes
+  // Keep localStorage in sync with *state*
   useEffect(() => {
     if (state.isAuthenticated && state.user) {
       localStorage.setItem('accessToken', state.accessToken || '')
+      localStorage.setItem('email', state.user.email)
+
       if (state.refreshToken) {
         localStorage.setItem('refreshToken', state.refreshToken)
+      } else {
+        localStorage.removeItem('refreshToken')
       }
-      localStorage.setItem('email', state.user.email)
+
       if (state.user.name) {
         localStorage.setItem('name', state.user.name)
+      } else {
+        localStorage.removeItem('name')
       }
     } else {
       localStorage.removeItem('accessToken')
@@ -65,54 +79,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state])
 
-const value = useMemo<AuthContextValue>(
-  () => ({
-    ...state,
-    login: (payload: AuthResponse) => {
-      // Prefer backend name, fall back to previously stored name
-      const existingName =
-        payload.name ??
-        state.user?.name ??
-        localStorage.getItem('name') ??
-        undefined
-
-      const user = { email: payload.email, name: existingName }
-
-      // 🔹 Write immediately to localStorage so fetchJSON sees it right away
-      localStorage.setItem('accessToken', payload.accessToken)
-      localStorage.setItem('email', user.email)
-      if (payload.refreshToken) {
-        localStorage.setItem('refreshToken', payload.refreshToken)
-      }
-      if (user.name) {
-        localStorage.setItem('name', user.name)
-      }
-
-      setState({
-        user,
-        accessToken: payload.accessToken,
-        refreshToken: payload.refreshToken,
-        isAuthenticated: true
-      })
-    },
-    logout: () => {
-      // Clear localStorage immediately on logout
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
-      localStorage.removeItem('email')
-      localStorage.removeItem('name')
-
-      setState({
-        user: null,
-        accessToken: null,
-        refreshToken: null,
-        isAuthenticated: false
-      })
+  const login = useCallback((payload: AuthResponse) => {
+    const user: AuthUser = {
+      email: payload.email,
+      name: payload.name ?? null
     }
-  }),
-  [state]
-)
 
+    setState({
+      user,
+      accessToken: payload.accessToken,
+      refreshToken: payload.refreshToken ?? null,
+      isAuthenticated: true
+    })
+  }, [])
+
+  const logout = useCallback(() => {
+    setState({
+      user: null,
+      accessToken: null,
+      refreshToken: null,
+      isAuthenticated: false
+    })
+  }, [])
+
+  const updateUser = useCallback((partial: Partial<AuthUser>) => {
+    setState(prev => {
+      if (!prev.user) return prev
+      const user: AuthUser = { ...prev.user, ...partial }
+      return { ...prev, user }
+    })
+  }, [])
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      ...state,
+      login,
+      logout,
+      updateUser
+    }),
+    [state, login, logout, updateUser]
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
@@ -124,5 +130,3 @@ export function useAuth(): AuthContextValue {
   }
   return ctx
 }
-
-
