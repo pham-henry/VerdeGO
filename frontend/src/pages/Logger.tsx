@@ -60,87 +60,102 @@ export default function Logger() {
   const totalPages = Math.ceil(allRows.length / PAGE_SIZE)
 
   return (
-    <div>
-      <h2>Daily Commute Logger</h2>
+    <div style={container}>
+      <div style={headerSection}>
+        <h2 style={title}>Daily Commute Logger</h2>
+        <p style={subtitle}>Record your daily commutes and track your environmental impact.</p>
+      </div>
 
       {/* Commute logging form */}
-      <form
-        onSubmit={submit}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(6, 1fr)',
-          gap: 8,
-          alignItems: 'end'
-        }}
-      >
-        <label>
-          Date
-          <input
-            type="date"
-            value={form.date}
-            onChange={e => setForm({ ...form, date: e.target.value })}
-          />
-        </label>
+      <section style={formCard} className="animate-fade-in">
+        <h3 style={formTitle}>Add New Commute</h3>
+        <form onSubmit={submit} style={formStyle}>
+          <div style={formGrid}>
+            <div style={field}>
+              <label style={label}>Date</label>
+              <input
+                type="date"
+                style={input}
+                value={form.date}
+                onChange={e => setForm({ ...form, date: e.target.value })}
+              />
+            </div>
 
-        <label>
-          Mode
-          <select
-            value={form.mode}
-            onChange={e => setForm({ ...form, mode: e.target.value })}
+            <div style={field}>
+              <label style={label}>Transport Mode</label>
+              <select
+                style={select}
+                value={form.mode}
+                onChange={e => setForm({ ...form, mode: e.target.value })}
+              >
+                <option value="">Select mode...</option>
+                <option>Walk</option>
+                <option>Bike</option>
+                <option>Scooter</option>
+                <option>Bus</option>
+                <option>Car (Gas)</option>
+                <option>Car (Hybrid)</option>
+                <option>Car (EV)</option>
+              </select>
+            </div>
+
+            <div style={field}>
+              <label style={label}>Distance (km)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                style={input}
+                placeholder="0.0"
+                value={form.distance_km || ''}
+                onChange={e => setForm({ ...form, distance_km: Number(e.target.value) })}
+              />
+            </div>
+
+            <div style={field}>
+              <label style={label}>Duration (min)</label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                style={input}
+                placeholder="0"
+                value={form.duration_min || ''}
+                onChange={e => setForm({ ...form, duration_min: Number(e.target.value) })}
+              />
+            </div>
+
+            <div style={{ ...field, gridColumn: 'span 2' }}>
+              <label style={label}>Notes (optional)</label>
+              <input
+                type="text"
+                style={input}
+                placeholder="Add any notes about this commute..."
+                value={form.notes}
+                onChange={e => setForm({ ...form, notes: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <button type="submit" style={submitButton}>
+            Add Commute
+          </button>
+        </form>
+      </section>
+
+      {/* Table section */}
+      <section style={tableSection}>
+        <div style={tableHeader}>
+          <h3 style={tableTitle}>
+            {showAll ? 'All Commutes' : 'Recent Commutes (Last 5)'}
+          </h3>
+          <button
+            onClick={() => { setShowAll(s => !s); setPage(0) }}
+            style={toggleButton}
           >
-            <option value="walk">Walking</option>
-            <option value="bike">Biking</option>
-            <option value="scooter">Scooter</option>
-            <option value="bus">Bus</option>
-            <option value="car_gas">Car (Gas)</option>
-            <option value="car_hybrid">Car (Hybrid)</option>
-            <option value="car_ev">Car (Electric)</option>
-          </select>
-        </label>
-
-        <label>
-          Distance (km)
-          <input
-            type="number"
-            step="0.1"
-            value={form.distance_km}
-            onChange={e => setForm({ ...form, distance_km: Number(e.target.value) })}
-          />
-        </label>
-
-        <label>
-          Duration (min)
-          <input
-            type="number"
-            step="1"
-            value={form.duration_min}
-            onChange={e => setForm({ ...form, duration_min: Number(e.target.value) })}
-          />
-        </label>
-
-        <label>
-          Notes
-          <input
-            value={form.notes}
-            onChange={e => setForm({ ...form, notes: e.target.value })}
-          />
-        </label>
-
-        <button type="submit">Add</button>
-      </form>
-
-      {/* Table header + toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', marginTop: 24, gap: 12 }}>
-        <h3 style={{ margin: 0 }}>
-          {showAll ? 'All Commutes' : 'Recent Commutes (Last 5)'}
-        </h3>
-        <button
-          onClick={() => { setShowAll(s => !s); setPage(0) }}
-          style={{ padding: '6px 10px' }}
-        >
-          {showAll ? 'View Less' : `View All (${allRows.length})`}
-        </button>
-      </div>
+            {showAll ? 'View Less' : `View All (${allRows.length})`}
+          </button>
+        </div>
 
         {/* Commutes table */}
         <div style={tableWrapper}>
@@ -211,6 +226,7 @@ export default function Logger() {
             </button>
           </div>
         )}
+      </section>
     </div>
   )
 }

@@ -85,22 +85,31 @@ export default function Account() {
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: '24px auto', padding: '0 8px' }}>
-      <h2>Account Settings</h2>
-      <p style={{ color: '#555', marginBottom: 16 }}>
-        Manage your profile information and security.
-      </p>
+    <div style={container}>
+      <div style={headerSection}>
+        <h2 style={title}>Account Settings</h2>
+        <p style={subtitle}>
+          Manage your profile information and security preferences.
+        </p>
+      </div>
 
       {message && <div style={msgBox}>{message}</div>}
       {error && <div style={errorBox}>{error}</div>}
 
       {/* Profile section */}
-      <section style={section}>
-        <h3 style={sectionTitle}>Profile</h3>
+      <section style={section} className="animate-fade-in">
+        <h3 style={sectionTitle}>
+          Profile Information
+        </h3>
         <form onSubmit={saveProfile} style={form}>
           <div style={field}>
             <label style={label}>Email</label>
-            <input style={input} value={email} disabled />
+            <input
+              style={{ ...input, ...inputDisabled }}
+              value={email}
+              disabled
+            />
+            <p style={helpText}>Your email cannot be changed.</p>
           </div>
 
           <div style={field}>
@@ -110,6 +119,7 @@ export default function Account() {
               type="text"
               required
               maxLength={100}
+              placeholder="Your full name"
               value={name}
               onChange={e => setName(e.target.value)}
             />
@@ -122,8 +132,10 @@ export default function Account() {
       </section>
 
       {/* Password section */}
-      <section style={section}>
-        <h3 style={sectionTitle}>Change Password</h3>
+      <section style={section} className="animate-fade-in">
+        <h3 style={sectionTitle}>
+          Change Password
+        </h3>
         <form onSubmit={changePasswordSubmit} style={form}>
           <div style={field}>
             <label style={label}>Current Password</label>
@@ -131,6 +143,7 @@ export default function Account() {
               style={input}
               type="password"
               required
+              placeholder="Enter current password"
               value={currentPassword}
               onChange={e => setCurrentPassword(e.target.value)}
             />
@@ -143,9 +156,11 @@ export default function Account() {
               type="password"
               required
               minLength={6}
+              placeholder="At least 6 characters"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
             />
+            <p style={helpText}>Must be at least 6 characters long.</p>
           </div>
 
           <button type="submit" style={primaryButton} disabled={savingPassword}>
@@ -154,7 +169,8 @@ export default function Account() {
         </form>
       </section>
 
-      <section style={{ marginTop: 24 }}>
+      <section style={dangerSection}>
+        <h3 style={dangerSectionTitle}>Account Actions</h3>
         <button style={dangerButton} onClick={signOut}>
           Sign Out
         </button>
@@ -163,79 +179,149 @@ export default function Account() {
   )
 }
 
+const container: React.CSSProperties = {
+  maxWidth: 700,
+  margin: '0 auto',
+  padding: 'var(--spacing-lg)',
+}
+
+const headerSection: React.CSSProperties = {
+  marginBottom: 'var(--spacing-xl)',
+}
+
+const title: React.CSSProperties = {
+  fontSize: '2rem',
+  fontWeight: 700,
+  marginBottom: 'var(--spacing-sm)',
+  background: 'linear-gradient(135deg, var(--verdego-green), var(--verdego-dark))',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
+}
+
+const subtitle: React.CSSProperties = {
+  fontSize: '1rem',
+  color: 'var(--text-secondary)',
+  marginBottom: 0,
+  lineHeight: 1.5,
+}
+
 const section: React.CSSProperties = {
-  marginTop: 16,
-  padding: 16,
-  borderRadius: 12,
-  border: '1px solid #E0E0E0',
-  background: '#FFFFFF',
+  marginTop: 'var(--spacing-lg)',
+  padding: 'var(--spacing-xl)',
+  borderRadius: 'var(--radius-lg)',
+  border: '1px solid var(--border-light)',
+  background: 'var(--bg-white)',
+  boxShadow: 'var(--shadow-md)',
 }
 
 const sectionTitle: React.CSSProperties = {
   marginTop: 0,
-  marginBottom: 12,
+  marginBottom: 'var(--spacing-lg)',
+  fontSize: '1.25rem',
+  fontWeight: 600,
 }
 
 const form: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 12,
+  gap: 'var(--spacing-lg)',
 }
 
 const field: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 4,
+  gap: 'var(--spacing-xs)',
 }
 
 const label: React.CSSProperties = {
-  fontSize: 13,
+  fontSize: '13px',
   fontWeight: 600,
-  color: '#555',
+  color: 'var(--text-secondary)',
+  marginBottom: 'var(--spacing-xs)',
 }
 
 const input: React.CSSProperties = {
-  padding: '8px 10px',
-  borderRadius: 6,
-  border: '1px solid #CCC',
-  fontSize: 14,
+  padding: 'var(--spacing-md)',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border-light)',
+  fontSize: '15px',
+  transition: 'all var(--transition-fast)',
+  backgroundColor: 'var(--bg-white)',
+}
+
+const inputDisabled: React.CSSProperties = {
+  backgroundColor: 'var(--bg-light)',
+  color: 'var(--text-tertiary)',
+  cursor: 'not-allowed',
+}
+
+const helpText: React.CSSProperties = {
+  fontSize: '12px',
+  color: 'var(--text-tertiary)',
+  margin: 'var(--spacing-xs) 0 0 0',
 }
 
 const primaryButton: React.CSSProperties = {
-  marginTop: 6,
-  padding: '8px 16px',
-  borderRadius: 6,
+  marginTop: 'var(--spacing-sm)',
+  padding: 'var(--spacing-md) var(--spacing-xl)',
+  borderRadius: 'var(--radius-md)',
   border: 'none',
   cursor: 'pointer',
-  background: '#4CAF50',
+  background: 'var(--color-primary)',
   color: '#fff',
-  fontSize: 14,
+  fontSize: '15px',
+  fontWeight: 600,
+  transition: 'all var(--transition-fast)',
+  boxShadow: 'var(--shadow-md)',
+  alignSelf: 'flex-start',
+}
+
+const dangerSection: React.CSSProperties = {
+  marginTop: 'var(--spacing-xl)',
+  padding: 'var(--spacing-xl)',
+  borderRadius: 'var(--radius-lg)',
+  border: '1px solid rgba(229, 57, 53, 0.3)',
+  background: 'rgba(255, 235, 238, 0.3)',
+}
+
+const dangerSectionTitle: React.CSSProperties = {
+  marginTop: 0,
+  marginBottom: 'var(--spacing-md)',
+  fontSize: '1.1rem',
+  fontWeight: 600,
+  color: 'var(--text-primary)',
 }
 
 const dangerButton: React.CSSProperties = {
-  padding: '8px 16px',
-  borderRadius: 6,
+  padding: 'var(--spacing-md) var(--spacing-xl)',
+  borderRadius: 'var(--radius-md)',
   border: 'none',
   cursor: 'pointer',
-  background: '#E53935',
+  background: 'var(--color-danger)',
   color: '#fff',
-  fontSize: 14,
+  fontSize: '15px',
+  fontWeight: 600,
+  transition: 'all var(--transition-fast)',
+  boxShadow: 'var(--shadow-md)',
 }
 
 const msgBox: React.CSSProperties = {
   background: '#E8F5E9',
   color: '#1B5E20',
-  padding: 10,
-  borderRadius: 8,
-  marginBottom: 12,
-  fontSize: 13,
+  padding: 'var(--spacing-md)',
+  borderRadius: 'var(--radius-md)',
+  marginBottom: 'var(--spacing-md)',
+  fontSize: '14px',
+  border: '1px solid #4CAF50',
 }
 
 const errorBox: React.CSSProperties = {
   background: '#FFEBEE',
   color: '#B71C1C',
-  padding: 10,
-  borderRadius: 8,
-  marginBottom: 12,
-  fontSize: 13,
+  padding: 'var(--spacing-md)',
+  borderRadius: 'var(--radius-md)',
+  marginBottom: 'var(--spacing-md)',
+  fontSize: '14px',
+  border: '1px solid #EF5350',
 }

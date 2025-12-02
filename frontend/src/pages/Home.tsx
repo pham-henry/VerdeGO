@@ -166,7 +166,7 @@ export default function Home() {
     const msgs: string[] = []
 
     if (stats.goalsHit > 0) {
-      msgs.push(`You've already hit ${stats.goalsHit} of your weekly goals. Amazing progress! 💚`)
+      msgs.push(`You've already hit ${stats.goalsHit} of your weekly goals. Amazing progress!`)
     } else {
       msgs.push(`You're getting started — keep logging commutes to hit your goals!`)
     }
@@ -175,7 +175,7 @@ export default function Home() {
 
     if (stats.zeroKm > 0) {
       msgs.push(
-        `You've traveled ${stats.zeroKm.toFixed(1)} km using zero-emission modes this week. 🌱`
+        `You've traveled ${stats.zeroKm.toFixed(1)} km using zero-emission modes this week.`
       )
     }
 
@@ -204,62 +204,66 @@ export default function Home() {
     affirmations[currentIdx] || 'Log your first commute to see your environmental impact!'
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 20px' }}>
-      <h1 style={{ marginBottom: 8 }}>
-        {userName
-          ? `Welcome to VerdeGO, ${userName} 🌿`
-          : 'Welcome back to VerdeGO 🌿'}
-      </h1>
-      <p style={{ marginBottom: 24, color: '#555' }}>
-        Track your weekly impact and celebrate the positive changes you're making.
-      </p>
+    <div style={container}>
+      <div style={headerSection}>
+        <h1 style={title}>
+          {userName
+            ? `Welcome back, ${userName}!`
+            : 'Welcome to VerdeGO'}
+        </h1>
+        <p style={subtitle}>
+          Track your weekly impact and celebrate the positive changes you're making.
+        </p>
+      </div>
 
       {/* ---------------- Impact Affirmer ---------------- */}
-      <section
-        style={{
-          borderRadius: 16,
-          padding: 20,
-          background: 'linear-gradient(135deg, #E8F5E9, #E3F2FD)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-          marginBottom: 32
-        }}
-      >
-        <div
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: 1,
-            textTransform: 'uppercase',
-            color: '#388E3C'
-          }}
-        >
-          Positive Impact Affirmer
+      <section style={affirmerCard}>
+        <div style={affirmerHeader}>
+          <span style={affirmerLabel}>Positive Impact Affirmer</span>
         </div>
 
         {loading ? (
-          <div style={{ marginTop: 16, opacity: 0.7 }}>Loading your recent impact…</div>
+          <div style={loadingText}>
+            <div style={spinner} />
+            Loading your recent impact…
+          </div>
         ) : (
           <>
-            <div style={{ marginTop: 12, fontSize: 18, fontWeight: 600 }}>
+            <div style={affirmerMessage} className="animate-fade-in">
               {currentMessage}
             </div>
 
-            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+            <div style={affirmerControls}>
               <button
                 onClick={() =>
                   setCurrentIdx((currentIdx - 1 + affirmations.length) % affirmations.length)
                 }
-                style={pillButtonStyle}
+                style={navButton}
+                aria-label="Previous affirmation"
               >
-                ◀ Prev
+                <span>◀</span>
               </button>
+              <div style={affirmerDots}>
+                {affirmations.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentIdx(idx)}
+                    style={{
+                      ...dot,
+                      ...(idx === currentIdx ? dotActive : {})
+                    }}
+                    aria-label={`Go to affirmation ${idx + 1}`}
+                  />
+                ))}
+              </div>
               <button
                 onClick={() =>
                   setCurrentIdx((currentIdx + 1) % affirmations.length)
                 }
-                style={pillButtonStyle}
+                style={navButton}
+                aria-label="Next affirmation"
               >
-                Next ▶
+                <span>▶</span>
               </button>
             </div>
           </>
@@ -267,21 +271,30 @@ export default function Home() {
       </section>
 
       {/* ---------------- Snapshot Stats ---------------- */}
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <section style={statsGrid}>
         <StatCard
           label="Weekly emissions"
-          value={`${stats.totalEmissions.toFixed(1)} kg CO₂e`}
+          value={`${stats.totalEmissions.toFixed(1)}`}
+          unit="kg CO₂e"
           hint={`Goal: ≤ ${goals.weeklyEmissionCapKg} kg`}
+          progress={Math.min(100, (stats.totalEmissions / goals.weeklyEmissionCapKg) * 100)}
+          variant={stats.totalEmissions <= goals.weeklyEmissionCapKg ? 'success' : 'warning'}
         />
         <StatCard
           label="Zero-emission distance"
-          value={`${stats.zeroKm.toFixed(1)} km`}
+          value={`${stats.zeroKm.toFixed(1)}`}
+          unit="km"
           hint={`Goal: ≥ ${goals.weeklyZeroKm} km`}
+          progress={Math.min(100, (stats.zeroKm / goals.weeklyZeroKm) * 100)}
+          variant={stats.zeroKm >= goals.weeklyZeroKm ? 'success' : 'default'}
         />
         <StatCard
           label="Commutes logged"
           value={`${stats.commuteCount}`}
+          unit="trips"
           hint={`Goal: ≥ ${goals.weeklyCommuteCount}`}
+          progress={Math.min(100, (stats.commuteCount / goals.weeklyCommuteCount) * 100)}
+          variant={stats.commuteCount >= goals.weeklyCommuteCount ? 'success' : 'default'}
         />
       </section>
     </div>
@@ -289,26 +302,237 @@ export default function Home() {
 }
 
 /* ----- Stat Card ----- */
-function StatCard(props: { label: string; value: string; hint?: string }) {
+function StatCard(props: {
+  label: string
+  value: string
+  unit?: string
+  hint?: string
+  progress?: number
+  variant?: 'success' | 'warning' | 'default'
+}) {
+  const variantColors = {
+    success: { bg: '#E8F5E9', border: '#4CAF50', text: '#2E7D32' },
+    warning: { bg: '#FFF3E0', border: '#FB8C00', text: '#E65100' },
+    default: { bg: '#F5F5F5', border: '#E0E0E0', text: '#666' }
+  }
+  
+  const colors = variantColors[props.variant || 'default']
+  
   return (
-    <div style={{ borderRadius: 12, border: '1px solid #E0E0E0', padding: 14, background: '#FFFFFF' }}>
-      <div style={{ fontSize: 12, textTransform: 'uppercase', color: '#777', marginBottom: 4 }}>
-        {props.label}
+    <div style={{
+      ...statCard,
+      borderColor: colors.border,
+      backgroundColor: colors.bg,
+    }} className="animate-fade-in">
+      <div style={statCardLabel}>{props.label}</div>
+      <div style={statCardValue}>
+        <span style={statCardNumber}>{props.value}</span>
+        {props.unit && <span style={statCardUnit}> {props.unit}</span>}
       </div>
-      <div style={{ fontSize: 20, fontWeight: 600 }}>{props.value}</div>
+      {props.progress !== undefined && (
+        <div style={progressBar}>
+          <div
+            style={{
+              ...progressFill,
+              width: `${props.progress}%`,
+              backgroundColor: colors.border,
+            }}
+          />
+        </div>
+      )}
       {props.hint && (
-        <div style={{ fontSize: 12, color: '#9E9E9E', marginTop: 4 }}>{props.hint}</div>
+        <div style={statCardHint}>{props.hint}</div>
       )}
     </div>
   )
 }
 
-/* ----- Reusable button style ----- */
-const pillButtonStyle: React.CSSProperties = {
-  padding: '6px 12px',
-  borderRadius: 999,
-  border: '1px solid #A5D6A7',
-  background: '#FFFFFF',
+/* ----- Styles ----- */
+const container: React.CSSProperties = {
+  maxWidth: 1000,
+  margin: '0 auto',
+  padding: 'var(--spacing-lg)',
+}
+
+const headerSection: React.CSSProperties = {
+  marginBottom: 'var(--spacing-xl)',
+}
+
+const title: React.CSSProperties = {
+  fontSize: '2.5rem',
+  fontWeight: 700,
+  marginBottom: 'var(--spacing-sm)',
+  background: 'linear-gradient(135deg, var(--verdego-green), var(--verdego-dark))',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
+}
+
+const subtitle: React.CSSProperties = {
+  fontSize: '1.1rem',
+  color: 'var(--text-secondary)',
+  marginBottom: 0,
+}
+
+const affirmerCard: React.CSSProperties = {
+  borderRadius: 'var(--radius-xl)',
+  padding: 'var(--spacing-xl)',
+  background: 'linear-gradient(135deg, #E8F5E9 0%, #E3F2FD 100%)',
+  boxShadow: 'var(--shadow-lg)',
+  marginBottom: 'var(--spacing-xl)',
+  border: '1px solid rgba(76, 175, 80, 0.2)',
+}
+
+const affirmerHeader: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--spacing-sm)',
+  fontSize: '12px',
+  fontWeight: 600,
+  letterSpacing: '1px',
+  textTransform: 'uppercase',
+  color: 'var(--verdego-dark)',
+  marginBottom: 'var(--spacing-md)',
+}
+
+const affirmerLabel: React.CSSProperties = {
+  fontSize: '11px',
+}
+
+const loadingText: React.CSSProperties = {
+  marginTop: 'var(--spacing-md)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--spacing-sm)',
+  opacity: 0.7,
+  color: 'var(--text-secondary)',
+}
+
+const spinner: React.CSSProperties = {
+  width: '16px',
+  height: '16px',
+  borderRadius: '50%',
+  border: '2px solid rgba(0,0,0,0.1)',
+  borderTopColor: 'var(--color-primary)',
+  animation: 'spin 0.8s linear infinite',
+}
+
+const affirmerMessage: React.CSSProperties = {
+  marginTop: 'var(--spacing-md)',
+  fontSize: '1.25rem',
+  fontWeight: 600,
+  lineHeight: 1.5,
+  color: 'var(--text-primary)',
+  minHeight: '60px',
+}
+
+const affirmerControls: React.CSSProperties = {
+  marginTop: 'var(--spacing-lg)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 'var(--spacing-md)',
+}
+
+const navButton: React.CSSProperties = {
+  padding: 'var(--spacing-sm) var(--spacing-md)',
+  borderRadius: 'var(--radius-full)',
+  border: '1px solid rgba(255, 255, 255, 0.8)',
+  background: 'rgba(255, 255, 255, 0.9)',
   cursor: 'pointer',
-  fontSize: 12
+  fontSize: '14px',
+  fontWeight: 600,
+  color: 'var(--verdego-dark)',
+  transition: 'all var(--transition-fast)',
+  boxShadow: 'var(--shadow-sm)',
+}
+
+// Add hover effect via inline style with onMouseEnter/onMouseLeave would require component changes
+// For now, the CSS transition handles basic hover
+
+const affirmerDots: React.CSSProperties = {
+  display: 'flex',
+  gap: 'var(--spacing-xs)',
+  alignItems: 'center',
+}
+
+const dot: React.CSSProperties = {
+  width: '8px',
+  height: '8px',
+  borderRadius: '50%',
+  border: 'none',
+  background: 'rgba(255, 255, 255, 0.5)',
+  cursor: 'pointer',
+  padding: 0,
+  transition: 'all var(--transition-fast)',
+}
+
+const dotActive: React.CSSProperties = {
+  background: 'var(--verdego-dark)',
+  width: '10px',
+  height: '10px',
+}
+
+const statsGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+  gap: 'var(--spacing-lg)',
+}
+
+const statCard: React.CSSProperties = {
+  borderRadius: 'var(--radius-lg)',
+  border: '1px solid',
+  padding: 'var(--spacing-lg)',
+  background: 'var(--bg-white)',
+  boxShadow: 'var(--shadow-md)',
+  transition: 'all var(--transition-base)',
+  position: 'relative',
+  overflow: 'hidden',
+}
+
+const statCardLabel: React.CSSProperties = {
+  fontSize: '12px',
+  textTransform: 'uppercase',
+  color: 'var(--text-secondary)',
+  marginBottom: 'var(--spacing-xs)',
+  fontWeight: 600,
+  letterSpacing: '0.5px',
+}
+
+const statCardValue: React.CSSProperties = {
+  fontSize: '2rem',
+  fontWeight: 700,
+  color: 'var(--text-primary)',
+  marginBottom: 'var(--spacing-sm)',
+}
+
+const statCardNumber: React.CSSProperties = {
+  fontSize: '2.5rem',
+}
+
+const statCardUnit: React.CSSProperties = {
+  fontSize: '1.25rem',
+  fontWeight: 500,
+  opacity: 0.8,
+}
+
+const progressBar: React.CSSProperties = {
+  width: '100%',
+  height: '4px',
+  backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  borderRadius: 'var(--radius-full)',
+  overflow: 'hidden',
+  marginBottom: 'var(--spacing-sm)',
+}
+
+const progressFill: React.CSSProperties = {
+  height: '100%',
+  borderRadius: 'var(--radius-full)',
+  transition: 'width var(--transition-base)',
+}
+
+const statCardHint: React.CSSProperties = {
+  fontSize: '12px',
+  color: 'var(--text-tertiary)',
+  marginTop: 'var(--spacing-xs)',
 }

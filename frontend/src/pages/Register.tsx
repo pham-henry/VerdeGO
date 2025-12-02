@@ -27,121 +27,167 @@ export default function Register() {
 
   return (
     <div style={pageContainer}>
-      <h2 style={{ marginBottom: 8 }}>Create Account</h2>
-      <p style={{ marginBottom: 16, color: '#555' }}>
-        Join VerdeGO and start tracking your greener commutes.
-      </p>
-
-      <button style={backButton} onClick={() => navigate('/')}>
-        ← Back to welcome
-      </button>
-
-      {error && <div style={errorBox}>{error}</div>}
-
-      <form onSubmit={submit} style={form}>
-        <div style={field}>
-          <label style={label}>Name</label>
-          <input
-            style={input}
-            type="text"
-            required
-            maxLength={100}
-            value={name}
-            onChange={e => setName(e.target.value)}
-          />
+      <div style={contentCard} className="animate-fade-in">
+        <div style={headerSection}>
+          <button style={backButton} onClick={() => navigate('/')}>
+            ← Back
+          </button>
+          <h2 style={title}>Create Account</h2>
+          <p style={subtitle}>
+            Join VerdeGO and start tracking your greener commutes today.
+          </p>
         </div>
 
-        <div style={field}>
-          <label style={label}>Email</label>
-          <input
-            style={input}
-            type="email"
-            required
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-          />
-        </div>
+        {error && <div style={errorBox}>{error}</div>}
 
-        <div style={field}>
-          <label style={label}>Password</label>
-          <input
-            style={input}
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-          />
-        </div>
+        <form onSubmit={submit} style={form}>
+          <div style={field}>
+            <label style={label}>Name</label>
+            <input
+              style={input}
+              type="text"
+              required
+              maxLength={100}
+              placeholder="Your full name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+          </div>
 
-        <button type="submit" style={primaryButton}>Create Account</button>
-      </form>
+          <div style={field}>
+            <label style={label}>Email</label>
+            <input
+              style={input}
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+            />
+          </div>
+
+          <div style={field}>
+            <label style={label}>Password</label>
+            <input
+              style={input}
+              type="password"
+              required
+              minLength={6}
+              placeholder="At least 6 characters"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+            />
+          </div>
+
+          <button type="submit" style={primaryButton}>Create Account</button>
+        </form>
+      </div>
     </div>
   )
 }
 
 /* reuse same style objects as in Login.tsx */
 const pageContainer: React.CSSProperties = {
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 'var(--spacing-lg)',
+  background: 'linear-gradient(135deg, #E8F5E9 0%, #E3F2FD 100%)',
+}
+
+const contentCard: React.CSSProperties = {
   maxWidth: 420,
-  margin: '60px auto',
-  padding: 24,
-  borderRadius: 12,
-  background: '#FFFFFF',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+  width: '100%',
+  padding: 'var(--spacing-2xl)',
+  borderRadius: 'var(--radius-xl)',
+  background: 'var(--bg-white)',
+  boxShadow: 'var(--shadow-xl)',
+  border: '1px solid var(--border-light)',
+}
+
+const headerSection: React.CSSProperties = {
+  marginBottom: 'var(--spacing-xl)',
+}
+
+const title: React.CSSProperties = {
+  fontSize: '2rem',
+  fontWeight: 700,
+  marginBottom: 'var(--spacing-sm)',
+  marginTop: 'var(--spacing-md)',
+  background: 'linear-gradient(135deg, var(--color-secondary), #1565C0)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
+}
+
+const subtitle: React.CSSProperties = {
+  fontSize: '1rem',
+  color: 'var(--text-secondary)',
+  marginBottom: 0,
+  lineHeight: 1.5,
 }
 
 const form: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 16,
-  marginTop: 12
+  gap: 'var(--spacing-lg)',
 }
 
 const field: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: 4
+  gap: 'var(--spacing-xs)',
 }
 
 const label: React.CSSProperties = {
-  fontSize: 13,
+  fontSize: '13px',
   fontWeight: 600,
-  color: '#555'
+  color: 'var(--text-secondary)',
+  marginBottom: 'var(--spacing-xs)',
 }
 
 const input: React.CSSProperties = {
-  padding: '8px 10px',
-  borderRadius: 6,
-  border: '1px solid #CCC',
-  fontSize: 14
+  padding: 'var(--spacing-md)',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border-light)',
+  fontSize: '15px',
+  transition: 'all var(--transition-fast)',
+  backgroundColor: 'var(--bg-white)',
 }
 
 const primaryButton: React.CSSProperties = {
-  marginTop: 8,
-  padding: '10px 18px',
-  background: '#2196F3',
-  color: '#fff',
-  borderRadius: 6,
+  marginTop: 'var(--spacing-md)',
+  padding: 'var(--spacing-md)',
+  background: 'var(--color-secondary)',
+  color: 'var(--text-light)',
+  borderRadius: 'var(--radius-md)',
   border: 'none',
   cursor: 'pointer',
-  fontSize: 15,
+  fontSize: '16px',
+  fontWeight: 600,
+  transition: 'all var(--transition-fast)',
+  boxShadow: 'var(--shadow-md)',
 }
 
 const backButton: React.CSSProperties = {
-  marginBottom: 12,
-  padding: '6px 10px',
-  fontSize: 13,
-  borderRadius: 999,
-  border: '1px solid #BDBDBD',
-  background: '#FAFAFA',
+  padding: 'var(--spacing-sm) var(--spacing-md)',
+  fontSize: '14px',
+  borderRadius: 'var(--radius-full)',
+  border: '1px solid var(--border-light)',
+  background: 'var(--bg-light)',
   cursor: 'pointer',
+  color: 'var(--text-secondary)',
+  transition: 'all var(--transition-fast)',
+  fontWeight: 500,
 }
 
 const errorBox: React.CSSProperties = {
   background: '#FFEBEE',
   color: '#B71C1C',
-  padding: 10,
-  borderRadius: 8,
-  marginBottom: 12,
-  fontSize: 13
+  padding: 'var(--spacing-md)',
+  borderRadius: 'var(--radius-md)',
+  marginBottom: 'var(--spacing-md)',
+  fontSize: '14px',
+  border: '1px solid #EF5350',
 }
