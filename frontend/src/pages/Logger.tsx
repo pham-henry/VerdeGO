@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { createCommute, listCommutes, deleteCommute, Commute } from '../lib/api'
 
-const defaultEmail = 'demo@user.com'
+const emailFromStorage = localStorage.getItem('email') || ''
 
 export default function Logger() {
   const [form, setForm] = useState<Commute>({
-    user_email: defaultEmail,
+    user_email: emailFromStorage,
     date: new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/Los_Angeles"
     }).format(new Date()),   // <-- PST date (YYYY-MM-DD)
@@ -22,7 +22,7 @@ export default function Logger() {
   const PAGE_SIZE = 7
 
   const load = async () => {
-    const data = await listCommutes({ user_email: defaultEmail })
+    const data = await listCommutes({ user_email: emailFromStorage })
     if (Array.isArray(data)) {
       // Sort newest → oldest once, keep for both views
       const sorted = [...data].sort(
@@ -43,7 +43,7 @@ export default function Logger() {
   }
 
   async function remove(id: number | string) {
-    await deleteCommute(id, defaultEmail)
+    await deleteCommute(id, emailFromStorage)
     await load()
   }
 

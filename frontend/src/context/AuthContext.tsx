@@ -65,28 +65,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state])
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      ...state,
-      login: (payload: AuthResponse) => {
-        setState({
-          user: { email: payload.email, name: payload.name },
-          accessToken: payload.accessToken,
-          refreshToken: payload.refreshToken,
-          isAuthenticated: true
-        })
-      },
-      logout: () => {
-        setState({
-          user: null,
-          accessToken: null,
-          refreshToken: null,
-          isAuthenticated: false
-        })
+const value = useMemo<AuthContextValue>(
+  () => ({
+    ...state,
+    login: (payload: AuthResponse) => {
+      // Prefer backend name, fall back to previously stored name
+      const existingName =
+        payload.name ??
+        state.user?.name ??
+        localStorage.getItem('name') ??
+        undefined
+
+      const user = { email: payload.email, name: existingName }
+
+      // 🔹 Write immediately to localStorage so fetchJSON sees it right away
+      localStorage.setItem('accessToken', payload.accessToken)
+      localStorage.setItem('email', user.email)
+      if (payload.refreshToken) {
+        localStorage.setItem('refreshToken', payload.refreshToken)
       }
-    }),
-    [state]
-  )
+      if (user.name) {
+        localStorage.setItem('name', user.name)
+      }
+
+      setState({
+        user,
+        accessToken: payload.accessToken,
+        refreshToken: payload.refreshToken,
+        isAuthenticated: true
+      })
+    },
+    logout: () => {
+      // Clear localStorage immediately on logout
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      localStorage.removeItem('email')
+      localStorage.removeItem('name')
+
+      setState({
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+        isAuthenticated: false
+      })
+    }
+  }),
+  [state]
+)
+
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

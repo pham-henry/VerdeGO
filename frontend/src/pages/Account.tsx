@@ -41,6 +41,7 @@ export default function Account() {
         body: JSON.stringify({ name })
       })
 
+      localStorage.setItem('name', name) //update name locally
       setMessage('Profile updated successfully.')
     } catch (err: any) {
       setError(err?.message || 'Failed to update profile.')

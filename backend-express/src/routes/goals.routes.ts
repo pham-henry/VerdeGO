@@ -21,7 +21,7 @@ function toResponse(goal: {
 }
 
 router.get(
-  '/goals',
+  '/',
   validate([query('user_email').isEmail().withMessage('Valid email is required')]),
   asyncHandler(async (req: Request, res: Response) => {
     const email = req.query.user_email as string;
@@ -34,7 +34,7 @@ router.get(
 );
 
 router.put(
-  '/goals',
+  '/',
   validate([
     body('user_email').isEmail().withMessage('Valid email is required'),
     body('weeklyZeroKm')
@@ -62,7 +62,7 @@ router.put(
 );
 
 router.post(
-  '/goals/reset',
+  '/reset',
   validate([body('user_email').isEmail().withMessage('Valid email is required')]),
   asyncHandler(async (req: Request, res: Response) => {
     const { user_email } = req.body;

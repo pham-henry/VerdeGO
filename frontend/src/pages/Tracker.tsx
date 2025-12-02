@@ -11,7 +11,7 @@ import {
   LineChart, Line, XAxis, YAxis
 } from 'recharts'
 
-const defaultEmail = 'demo@user.com'
+const emailFromStorage = localStorage.getItem('email') || ''
 
 // emitting modes palette
 const MODE_COLORS: Record<string, string> = {
@@ -54,9 +54,9 @@ export default function Tracker() {
     let cancelled = false
     setOverlayVisible(true)
 
-    const pMode = emissionSummaryByMode({ user_email: defaultEmail }, { signal: ctrl.signal })
-    const pDay  = emissionSummaryByDay({ user_email: defaultEmail }, { signal: ctrl.signal })
-    const pComm = listCommutes({ user_email: defaultEmail }, { signal: ctrl.signal })
+    const pMode = emissionSummaryByMode({ user_email: emailFromStorage }, { signal: ctrl.signal })
+    const pDay  = emissionSummaryByDay({ user_email: emailFromStorage }, { signal: ctrl.signal })
+    const pComm = listCommutes({ user_email: emailFromStorage }, { signal: ctrl.signal })
 
     Promise.allSettled([pMode, pDay, pComm])
       .then(([modeRes, dayRes, commuteRes]) => {
