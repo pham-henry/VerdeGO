@@ -77,6 +77,23 @@ From the project root (`VerdeGO/`):
    docker-compose down -v
    ```
 
+6. **Schema Changes**
+Since Prisma Client is generated **inside the image**, and schema changes require regenerating it → you MUST rebuild the backend image.
+
+### ✔ After EVERY schema change
+
+```bash
+docker compose build backend
+docker compose up -d backend
+docker compose exec backend npx prisma migrate deploy
+```
+
+**Meaning:**
+
+1. **Rebuild** the backend image
+2. **Restart** the backend container
+3. **Apply new migrations** inside the container
+
 ---
 
 ## Local Development (without full Docker stack)
