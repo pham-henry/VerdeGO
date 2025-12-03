@@ -134,6 +134,13 @@ export default function Recommender() {
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+  // Validation errors
+  const [validationErrors, setValidationErrors] = useState<{
+    origin?: string
+    destination?: string
+    priorities?: string
+  }>({})
+
   // NEW: user priorities for eco / speed / cost
   const [ecoPriority, setEcoPriority] = useState<Priority>(1)
   const [speedPriority, setSpeedPriority] = useState<Priority>(2)
@@ -217,6 +224,29 @@ export default function Recommender() {
     const g = (window as any).google
     if (!g || !mapObj.current) return
 
+    // Validate coordinates
+    const lat = typeof latLng.lat === 'function' ? latLng.lat() : latLng.lat
+    const lng = typeof latLng.lng === 'function' ? latLng.lng() : latLng.lng
+    
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [kind]: 'Invalid coordinates. Please try again.'
+      }))
+      return
+    }
+
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [kind]: 'Coordinates are out of valid range.'
+      }))
+      return
+    }
+
+    // Clear validation error for this field
+    setValidationErrors(prev => ({ ...prev, [kind]: undefined }))
+
     // remove existing marker of that kind
     if (markers.current[kind]) markers.current[kind].setMap(null)
 
@@ -286,6 +316,7 @@ export default function Recommender() {
     setDestination('')
     setResp(null)
     setErrorMsg(null)
+    setValidationErrors({})
 
     const g = (window as any).google
     if (g && mapObj.current) {
@@ -302,46 +333,111 @@ export default function Recommender() {
     }
   }
 
-  async function run(): Promise<void> {
-  try {
-    setLoading(true)
-    setErrorMsg(null)
+  // Validation function
+  function validateInputs(): boolean {
+    const errors: typeof validationErrors = {}
+    let isValid = true
 
+    // Validate origin
     const oPos = markers.current.origin?.getPosition?.()
-    const dPos = markers.current.destination?.getPosition?.()
-
-    const prefs = {
-      ecoPriority,
-      speedPriority,
-      costPriority,
+    if (!oPos && !origin.trim()) {
+      errors.origin = 'Origin is required. Enter an address or click on the map.'
+      isValid = false
+    } else if (oPos) {
+      const lat = oPos.lat()
+      const lng = oPos.lng()
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        errors.origin = 'Invalid origin coordinates.'
+        isValid = false
+      } else if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        errors.origin = 'Origin coordinates are out of valid range.'
+        isValid = false
+      }
     }
 
-    const payload = (oPos && dPos)
-      ? {
-          origin: { lat: oPos.lat(), lng: oPos.lng() },
-          destination: { lat: dPos.lat(), lng: dPos.lng() },
-          prefs,
-        }
-      : {
-          origin,
-          destination,
-          prefs,
-        }
+    // Validate destination
+    const dPos = markers.current.destination?.getPosition?.()
+    if (!dPos && !destination.trim()) {
+      errors.destination = 'Destination is required. Enter an address or click on the map.'
+      isValid = false
+    } else if (dPos) {
+      const lat = dPos.lat()
+      const lng = dPos.lng()
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        errors.destination = 'Invalid destination coordinates.'
+        isValid = false
+      } else if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        errors.destination = 'Destination coordinates are out of valid range.'
+        isValid = false
+      }
+    }
 
-    const data = await recommendRoute(payload as any) as { options?: Option[] } | null
+    // Validate priorities are unique
+    const priorities = [ecoPriority, speedPriority, costPriority]
+    const uniquePriorities = new Set(priorities)
+    if (uniquePriorities.size !== 3) {
+      errors.priorities = 'Each priority must have a unique value (1, 2, or 3).'
+      isValid = false
+    }
 
-    if (!data || ((Array.isArray(data) && data.length === 0) || (!Array.isArray(data) && !data?.options))) {
-      setErrorMsg('No route options returned. Try different locations or check the backend.')
+    // Validate priority values
+    if (![1, 2, 3].includes(ecoPriority) || ![1, 2, 3].includes(speedPriority) || ![1, 2, 3].includes(costPriority)) {
+      errors.priorities = 'Priorities must be 1, 2, or 3.'
+      isValid = false
+    }
+
+    setValidationErrors(errors)
+    return isValid
+  }
+
+  async function run(): Promise<void> {
+    // Clear previous errors
+    setErrorMsg(null)
+    setValidationErrors({})
+
+    // Validate inputs
+    if (!validateInputs()) {
       return
     }
-    setResp(data)
-  } catch (err: any) {
-    console.error('recommend failed', err)
-    setErrorMsg(err?.message || 'Failed to fetch recommendations. Is the server running?')
-  } finally {
-    setLoading(false)
+
+    try {
+      setLoading(true)
+
+      const oPos = markers.current.origin?.getPosition?.()
+      const dPos = markers.current.destination?.getPosition?.()
+
+      const prefs = {
+        ecoPriority,
+        speedPriority,
+        costPriority,
+      }
+
+      const payload = (oPos && dPos)
+        ? {
+            origin: { lat: oPos.lat(), lng: oPos.lng() },
+            destination: { lat: dPos.lat(), lng: dPos.lng() },
+            prefs,
+          }
+        : {
+            origin: origin.trim(),
+            destination: destination.trim(),
+            prefs,
+          }
+
+      const data = await recommendRoute(payload as any) as { options?: Option[] } | null
+
+      if (!data || ((Array.isArray(data) && data.length === 0) || (!Array.isArray(data) && !data?.options))) {
+        setErrorMsg('No route options returned. Try different locations or check the backend.')
+        return
+      }
+      setResp(data)
+    } catch (err: any) {
+      console.error('recommend failed', err)
+      setErrorMsg(err?.message || 'Failed to fetch recommendations. Is the server running?')
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
 
    /* -------- Build ranking rows from response, using priorities -------- */
@@ -475,24 +571,54 @@ export default function Recommender() {
       >
         {/* Origin */}
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span>Origin:</span>
+          <span>Origin: <span style={{ color: '#b00020' }}>*</span></span>
           <input
             ref={originInputRef}
             value={origin}
-            onChange={(e) => setOrigin(e.target.value)}
-            style={{ padding: "6px 8px" }}
+            onChange={(e) => {
+              setOrigin(e.target.value)
+              if (validationErrors.origin) {
+                setValidationErrors(prev => ({ ...prev, origin: undefined }))
+              }
+            }}
+            style={{
+              padding: "6px 8px",
+              border: validationErrors.origin ? '2px solid #b00020' : '1px solid #ccc',
+              borderRadius: 4
+            }}
+            placeholder="Enter address or click on map"
           />
+          {validationErrors.origin && (
+            <span style={{ color: '#b00020', fontSize: '12px', marginTop: '-2px' }}>
+              {validationErrors.origin}
+            </span>
+          )}
         </label>
 
         {/* Destination */}
         <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span>Destination:</span>
+          <span>Destination: <span style={{ color: '#b00020' }}>*</span></span>
           <input
             ref={destInputRef}
             value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            style={{ padding: "6px 8px" }}
+            onChange={(e) => {
+              setDestination(e.target.value)
+              if (validationErrors.destination) {
+                setValidationErrors(prev => ({ ...prev, destination: undefined }))
+              }
+            }}
+            style={{
+              padding: "6px 8px",
+              border: validationErrors.destination ? '2px solid #b00020' : '1px solid #ccc',
+              borderRadius: 4
+            }}
+            placeholder="Enter address or click on map"
           />
+          {validationErrors.destination && (
+            <span style={{ color: '#b00020', fontSize: '12px', marginTop: '-2px' }}>
+              {validationErrors.destination}
+            </span>
+          )}
         </label>
 
         {/* Swap button */}
@@ -511,7 +637,11 @@ export default function Recommender() {
           <button
             onClick={run}
             disabled={loading}
-            style={{ height: 36 }}
+            style={{
+              height: 36,
+              opacity: loading ? 0.6 : 1,
+              cursor: loading ? 'not-allowed' : 'pointer'
+            }}
           >
             {loading ? "Recommending…" : "Recommend"}
           </button>
@@ -544,8 +674,18 @@ export default function Recommender() {
             Eco impact
             <select
               value={ecoPriority}
-              onChange={e => setEcoPriority(Number(e.target.value) as Priority)}
-              style={{ marginTop: 4, padding: '4px 8px' }}
+              onChange={e => {
+                setEcoPriority(Number(e.target.value) as Priority)
+                if (validationErrors.priorities) {
+                  setValidationErrors(prev => ({ ...prev, priorities: undefined }))
+                }
+              }}
+              style={{
+                marginTop: 4,
+                padding: '4px 8px',
+                border: validationErrors.priorities ? '2px solid #b00020' : '1px solid #ccc',
+                borderRadius: 4
+              }}
             >
               <option value={1}>1 (highest)</option>
               <option value={2}>2</option>
@@ -557,8 +697,18 @@ export default function Recommender() {
             Speed
             <select
               value={speedPriority}
-              onChange={e => setSpeedPriority(Number(e.target.value) as Priority)}
-              style={{ marginTop: 4, padding: '4px 8px' }}
+              onChange={e => {
+                setSpeedPriority(Number(e.target.value) as Priority)
+                if (validationErrors.priorities) {
+                  setValidationErrors(prev => ({ ...prev, priorities: undefined }))
+                }
+              }}
+              style={{
+                marginTop: 4,
+                padding: '4px 8px',
+                border: validationErrors.priorities ? '2px solid #b00020' : '1px solid #ccc',
+                borderRadius: 4
+              }}
             >
               <option value={1}>1 (highest)</option>
               <option value={2}>2</option>
@@ -570,8 +720,18 @@ export default function Recommender() {
             Cost
             <select
               value={costPriority}
-              onChange={e => setCostPriority(Number(e.target.value) as Priority)}
-              style={{ marginTop: 4, padding: '4px 8px' }}
+              onChange={e => {
+                setCostPriority(Number(e.target.value) as Priority)
+                if (validationErrors.priorities) {
+                  setValidationErrors(prev => ({ ...prev, priorities: undefined }))
+                }
+              }}
+              style={{
+                marginTop: 4,
+                padding: '4px 8px',
+                border: validationErrors.priorities ? '2px solid #b00020' : '1px solid #ccc',
+                borderRadius: 4
+              }}
             >
               <option value={1}>1 (highest)</option>
               <option value={2}>2</option>
@@ -579,6 +739,11 @@ export default function Recommender() {
             </select>
           </label>
         </div>
+        {validationErrors.priorities && (
+          <div style={{ color: '#b00020', fontSize: '12px', marginTop: 8 }}>
+            {validationErrors.priorities}
+          </div>
+        )}
       </section>
 
       {errorMsg && <div style={{ marginTop: 8, color: '#b00020' }}>{errorMsg}</div>}
