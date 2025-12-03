@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { API, fetchJSON } from '../lib/api' 
 import { useAuth } from '../context/AuthContext'
+import { IS_DEMO } from '../config/demo'
 
 export default function Account() {
   const navigate = useNavigate()
@@ -31,18 +32,24 @@ export default function Account() {
     setSavingProfile(true)
 
     try {
-      // adjust endpoint/method to match your backend
-      await fetchJSON(`${API}/api/users/me`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-        },
-        body: JSON.stringify({ name })
-      })
+      if (IS_DEMO) {
+        // In demo mode, just update localStorage
+        localStorage.setItem('name', name)
+        setMessage('Profile updated successfully (demo mode).')
+      } else {
+        // adjust endpoint/method to match your backend
+        await fetchJSON(`${API}/api/users/me`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+          },
+          body: JSON.stringify({ name })
+        })
 
-      localStorage.setItem('name', name) //update name locally
-      setMessage('Profile updated successfully.')
+        localStorage.setItem('name', name) //update name locally
+        setMessage('Profile updated successfully.')
+      }
     } catch (err: any) {
       setError(err?.message || 'Failed to update profile.')
     } finally {
@@ -57,21 +64,28 @@ export default function Account() {
     setSavingPassword(true)
 
     try {
-      await fetchJSON(`${API}/api/users/change-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-        },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword
+      if (IS_DEMO) {
+        // In demo mode, just show a message
+        setMessage('Password update simulated (demo mode - changes are not saved).')
+        setCurrentPassword('')
+        setNewPassword('')
+      } else {
+        await fetchJSON(`${API}/api/users/change-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+          },
+          body: JSON.stringify({
+            currentPassword,
+            newPassword
+          })
         })
-      })
 
-      setMessage('Password updated successfully.')
-      setCurrentPassword('')
-      setNewPassword('')
+        setMessage('Password updated successfully.')
+        setCurrentPassword('')
+        setNewPassword('')
+      }
     } catch (err: any) {
       setError(err?.message || 'Failed to update password.')
     } finally {

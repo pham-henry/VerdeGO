@@ -1,4 +1,7 @@
 // lib/api.ts
+import { IS_DEMO } from '../config/demo'
+import * as demoData from './demo-data'
+
 export const API = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 const DEFAULT_TIMEOUT = 7000 // ms
 
@@ -227,6 +230,9 @@ function daysAgoISO(n: number) {
 /* ---------- API surface ---------- */
 
 export async function createCommute(c: Omit<Commute, 'user_email'>, opts: FetchOpts = {}) {
+  if (IS_DEMO) {
+    return demoData.demoCreateCommute(c)
+  }
   return fetchJSON(`${API}/api/commutes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -238,6 +244,9 @@ export async function deleteCommute(
   id: string | number,
   opts: FetchOpts = {}
 ) {
+  if (IS_DEMO) {
+    return demoData.demoDeleteCommute(id)
+  }
   return fetchJSON(
     `${API}/api/commutes/${id}`,
     {
@@ -250,6 +259,9 @@ export async function deleteCommute(
 
 type ListParams = { from?: string, to?: string }
 export async function listCommutes(params: ListParams = {}, opts: FetchOpts = {}) {
+  if (IS_DEMO) {
+    return demoData.demoListCommutes(params)
+  }
   const from = params.from ?? daysAgoISO(60)
   const to = params.to ?? todayISO()
   return fetchJSON<Commute[]>(`${API}/api/commutes${qs({ from, to })}`, {}, opts)
@@ -262,6 +274,9 @@ export async function emissionSummaryByMode(
   params: SummaryBase & { groupBy?: 'mode' },
   opts: FetchOpts = {}
 ): Promise<EmissionByMode> {
+  if (IS_DEMO) {
+    return demoData.demoEmissionSummaryByMode(params)
+  }
   const from = params.from ?? daysAgoISO(60)
   const to = params.to ?? todayISO()
   return fetchJSON<EmissionByMode>(`${API}/api/emissions/summary${qs({ ...params, groupBy: 'mode', from, to })}`, {}, opts)
@@ -271,12 +286,18 @@ export async function emissionSummaryByDay(
   params: SummaryBase & { groupBy?: 'day' },
   opts: FetchOpts = {}
 ): Promise<EmissionByDay> {
+  if (IS_DEMO) {
+    return demoData.demoEmissionSummaryByDay(params)
+  }
   const from = params.from ?? daysAgoISO(60)
   const to = params.to ?? todayISO()
   return fetchJSON<EmissionByDay>(`${API}/api/emissions/summary${qs({ ...params, groupBy: 'day', from, to })}`, {}, opts)
 }
 
 export async function recommendRoute(payload: any, opts: FetchOpts = {}) {
+  if (IS_DEMO) {
+    return demoData.demoRecommendRoute(payload)
+  }
   return fetchJSON(`${API}/api/recommend`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -285,10 +306,16 @@ export async function recommendRoute(payload: any, opts: FetchOpts = {}) {
 }
 
 export async function getWeeklyGoals(opts: FetchOpts = {}) {
+  if (IS_DEMO) {
+    return demoData.demoGetWeeklyGoals()
+  }
   return fetchJSON<WeeklyGoalResponse>(`${API}/api/goals`, {}, opts)
 }
 
 export async function saveWeeklyGoals(payload: Omit<WeeklyGoalPayload, 'user_email'>, opts: FetchOpts = {}) {
+  if (IS_DEMO) {
+    return demoData.demoSaveWeeklyGoals(payload)
+  }
   return fetchJSON<WeeklyGoalResponse>(`${API}/api/goals`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -297,6 +324,9 @@ export async function saveWeeklyGoals(payload: Omit<WeeklyGoalPayload, 'user_ema
 }
 
 export async function resetWeeklyGoals(opts: FetchOpts = {}) {
+  if (IS_DEMO) {
+    return demoData.demoResetWeeklyGoals()
+  }
   return fetchJSON<WeeklyGoalResponse>(`${API}/api/goals/reset`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -321,6 +351,15 @@ type LoginBody = { email: string; password: string }
 
 // Login
 export async function loginUser(body: LoginBody ): Promise<AuthResponse> {
+  if (IS_DEMO) {
+    // In demo mode, accept any credentials and return demo user
+    return Promise.resolve({
+      accessToken: 'demo-token',
+      refreshToken: 'demo-refresh-token',
+      email: 'demo@verdego.app',
+      name: 'Demo User'
+    })
+  }
   return fetchJSON(`${API}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -330,6 +369,15 @@ export async function loginUser(body: LoginBody ): Promise<AuthResponse> {
 
 // Register
 export async function registerUser(body: RegisterBody): Promise<AuthResponse> {
+  if (IS_DEMO) {
+    // In demo mode, accept any registration and return demo user
+    return Promise.resolve({
+      accessToken: 'demo-token',
+      refreshToken: 'demo-refresh-token',
+      email: 'demo@verdego.app',
+      name: body.name || 'Demo User'
+    })
+  }
   return fetchJSON<AuthResponse>(`${API}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

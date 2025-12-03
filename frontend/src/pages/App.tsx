@@ -1,4 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { IS_DEMO } from '../config/demo'
 
 export default function App() {
   const loc = useLocation()
@@ -68,6 +69,11 @@ export default function App() {
             <p style={footerText}>
               © 2025 VerdeGO · Making sustainable commutes easy
             </p>
+            {IS_DEMO && (
+              <p style={demoNotice}>
+                Demo mode: data is simulated and not saved on a server.
+              </p>
+            )}
           </div>
         </footer>
       )}
@@ -175,4 +181,12 @@ const footerText: React.CSSProperties = {
   fontSize: '13px',
   color: 'var(--text-tertiary)',
   margin: 0,
+}
+
+const demoNotice: React.CSSProperties = {
+  fontSize: '12px',
+  color: 'var(--text-tertiary)',
+  margin: 'var(--spacing-xs) 0 0 0',
+  fontStyle: 'italic',
+  opacity: 0.8,
 }

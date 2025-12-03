@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { AuthResponse } from '../lib/api'
 import { setTokenRefreshCallback } from '../lib/api'
+import { IS_DEMO, DEMO_USER } from '../config/demo'
 
 type AuthUser = {
   email: string
@@ -22,6 +23,17 @@ type AuthContextValue = AuthState & {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 function readInitialState(): AuthState {
+  // In demo mode, always return authenticated demo user
+  if (IS_DEMO) {
+    return {
+      user: { email: DEMO_USER.email, name: DEMO_USER.name },
+      accessToken: 'demo-token',
+      refreshToken: 'demo-refresh-token',
+      isAuthenticated: true
+    }
+  }
+
+  // Normal mode: check localStorage for tokens
   const accessToken = localStorage.getItem('accessToken')
   const refreshToken = localStorage.getItem('refreshToken')
   const email = localStorage.getItem('email')
@@ -70,8 +82,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  // Keep localStorage in sync when state changes
+  // Keep localStorage in sync when state changes (skip in demo mode)
   useEffect(() => {
+    if (IS_DEMO) {
+      // In demo mode, always keep demo user info in localStorage for compatibility
+      localStorage.setItem('accessToken', 'demo-token')
+      localStorage.setItem('refreshToken', 'demo-refresh-token')
+      localStorage.setItem('email', DEMO_USER.email)
+      localStorage.setItem('name', DEMO_USER.name)
+      return
+    }
+
     if (state.isAuthenticated && state.user) {
       localStorage.setItem('accessToken', state.accessToken || '')
       if (state.refreshToken) {
@@ -93,6 +114,23 @@ const value = useMemo<AuthContextValue>(
   () => ({
     ...state,
     login: (payload: AuthResponse) => {
+      // In demo mode, just set the demo user without backend calls
+      if (IS_DEMO) {
+        const user = { email: DEMO_USER.email, name: DEMO_USER.name }
+        localStorage.setItem('accessToken', 'demo-token')
+        localStorage.setItem('refreshToken', 'demo-refresh-token')
+        localStorage.setItem('email', DEMO_USER.email)
+        localStorage.setItem('name', DEMO_USER.name)
+        setState({
+          user,
+          accessToken: 'demo-token',
+          refreshToken: 'demo-refresh-token',
+          isAuthenticated: true
+        })
+        return
+      }
+
+      // Normal mode: use real backend response
       // Prefer backend name, fall back to previously stored name
       const existingName =
         payload.name ??
@@ -120,7 +158,23 @@ const value = useMemo<AuthContextValue>(
       })
     },
     logout: () => {
-      // Clear localStorage immediately on logout
+      // In demo mode, reset to demo user instead of logging out
+      if (IS_DEMO) {
+        const user = { email: DEMO_USER.email, name: DEMO_USER.name }
+        localStorage.setItem('accessToken', 'demo-token')
+        localStorage.setItem('refreshToken', 'demo-refresh-token')
+        localStorage.setItem('email', DEMO_USER.email)
+        localStorage.setItem('name', DEMO_USER.name)
+        setState({
+          user,
+          accessToken: 'demo-token',
+          refreshToken: 'demo-refresh-token',
+          isAuthenticated: true
+        })
+        return
+      }
+
+      // Normal mode: clear everything
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
       localStorage.removeItem('email')
