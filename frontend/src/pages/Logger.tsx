@@ -10,15 +10,20 @@ export default function Logger() {
     date: new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/Los_Angeles"
     }).format(new Date()),   // <-- PST date (YYYY-MM-DD)
-    mode: 'walk',
-    distance_km: 1,
-    duration_min: 1,
+    mode: '',
+    distance_km: 0,
+    duration_min: 0,
     notes: ''
   });
 
   const [allRows, setAllRows] = useState<any[]>([])
   const [showAll, setShowAll] = useState(false)
   const [page, setPage] = useState(0)
+  const [errors, setErrors] = useState<{
+    mode?: string
+    distance_km?: string
+    date?: string
+  }>({})
 
   const PAGE_SIZE = 7
 
@@ -41,11 +46,67 @@ export default function Logger() {
 
   useEffect(() => { load() }, [userEmail])
 
+  function validateForm(): boolean {
+    const newErrors: typeof errors = {}
+    let isValid = true
+
+    // Validate transport mode
+    if (!form.mode || form.mode.trim() === '') {
+      newErrors.mode = 'Transport mode is required'
+      isValid = false
+    }
+
+    // Validate distance
+    const distance = Number(form.distance_km)
+    if (!Number.isFinite(distance) || distance <= 0) {
+      newErrors.distance_km = 'Distance must be greater than 0'
+      isValid = false
+    }
+
+    // Validate date
+    if (!form.date || form.date.trim() === '') {
+      newErrors.date = 'Date is required'
+      isValid = false
+    } else {
+      // Check if date is valid
+      const dateObj = new Date(form.date)
+      if (isNaN(dateObj.getTime())) {
+        newErrors.date = 'Invalid date'
+        isValid = false
+      }
+    }
+
+    setErrors(newErrors)
+    return isValid
+  }
+
   async function submit(e: any) {
     e.preventDefault()
     if (!userEmail) return
-    await createCommute(form)
-    await load()
+
+    // Validate form before submission
+    if (!validateForm()) {
+      return
+    }
+
+    try {
+      await createCommute(form)
+      // Reset form after successful submission
+      setForm({
+        date: new Intl.DateTimeFormat("en-CA", {
+          timeZone: "America/Los_Angeles"
+        }).format(new Date()),
+        mode: '',
+        distance_km: 0,
+        duration_min: 0,
+        notes: ''
+      })
+      setErrors({})
+      await load()
+    } catch (err: any) {
+      console.error('Failed to create commute:', err)
+      // Error is already handled by the API layer
+    }
   }
 
   async function remove(id: number | string) {
@@ -79,21 +140,46 @@ export default function Logger() {
         <form onSubmit={submit} style={formStyle}>
           <div style={formGrid}>
             <div style={field}>
-              <label style={label}>Date</label>
+              <label style={label}>
+                Date <span style={{ color: '#b00020' }}>*</span>
+              </label>
               <input
                 type="date"
-                style={input}
+                style={{
+                  ...input,
+                  border: errors.date ? '2px solid #b00020' : input.border
+                }}
                 value={form.date}
-                onChange={e => setForm({ ...form, date: e.target.value })}
+                onChange={e => {
+                  setForm({ ...form, date: e.target.value })
+                  if (errors.date) {
+                    setErrors(prev => ({ ...prev, date: undefined }))
+                  }
+                }}
               />
+              {errors.date && (
+                <span style={{ color: '#b00020', fontSize: '12px', marginTop: '4px' }}>
+                  {errors.date}
+                </span>
+              )}
             </div>
 
             <div style={field}>
-              <label style={label}>Transport Mode</label>
+              <label style={label}>
+                Transport Mode <span style={{ color: '#b00020' }}>*</span>
+              </label>
               <select
-                style={select}
+                style={{
+                  ...select,
+                  border: errors.mode ? '2px solid #b00020' : select.border
+                }}
                 value={form.mode}
-                onChange={e => setForm({ ...form, mode: e.target.value })}
+                onChange={e => {
+                  setForm({ ...form, mode: e.target.value })
+                  if (errors.mode) {
+                    setErrors(prev => ({ ...prev, mode: undefined }))
+                  }
+                }}
               >
                 <option value="">Select mode...</option>
                 <option>Walk</option>
@@ -104,19 +190,39 @@ export default function Logger() {
                 <option>Car (Hybrid)</option>
                 <option>Car (EV)</option>
               </select>
+              {errors.mode && (
+                <span style={{ color: '#b00020', fontSize: '12px', marginTop: '4px' }}>
+                  {errors.mode}
+                </span>
+              )}
             </div>
 
             <div style={field}>
-              <label style={label}>Distance (km)</label>
+              <label style={label}>
+                Distance (km) <span style={{ color: '#b00020' }}>*</span>
+              </label>
               <input
                 type="number"
                 step="0.1"
                 min="0"
-                style={input}
+                style={{
+                  ...input,
+                  border: errors.distance_km ? '2px solid #b00020' : input.border
+                }}
                 placeholder="0.0"
                 value={form.distance_km || ''}
-                onChange={e => setForm({ ...form, distance_km: Number(e.target.value) })}
+                onChange={e => {
+                  setForm({ ...form, distance_km: Number(e.target.value) })
+                  if (errors.distance_km) {
+                    setErrors(prev => ({ ...prev, distance_km: undefined }))
+                  }
+                }}
               />
+              {errors.distance_km && (
+                <span style={{ color: '#b00020', fontSize: '12px', marginTop: '4px' }}>
+                  {errors.distance_km}
+                </span>
+              )}
             </div>
 
             <div style={field}>

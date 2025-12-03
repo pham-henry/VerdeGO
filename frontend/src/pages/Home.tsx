@@ -132,7 +132,13 @@ export default function Home() {
   const stats = useMemo(() => {
     const totalEmissions = weeklyEmissions.reduce((acc, p) => acc + p.value, 0)
 
-    const ZERO = ['walk', 'bike']
+    // Normalize mode for comparison (case-insensitive)
+    const isZeroEmission = (mode: string): boolean => {
+      if (!mode) return false
+      const normalized = mode.trim().toLowerCase()
+      return normalized.includes('walk') || normalized.includes('bike') || normalized.includes('bicycle')
+    }
+
     let zeroKm = 0
     let commuteCount = 0
     let zeroTrips = 0
@@ -141,7 +147,7 @@ export default function Home() {
       const km = Number(c.distance_km || 0)
       if (!Number.isFinite(km) || km <= 0) continue
       commuteCount++
-      if (ZERO.includes(c.mode)) {
+      if (isZeroEmission(c.mode)) {
         zeroKm += km
         zeroTrips++
       }

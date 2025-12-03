@@ -12,17 +12,58 @@ import {
 } from 'recharts'
 import { useAuth } from '../context/AuthContext'
 
-// emitting modes palette
+// emitting modes palette (normalized mode names)
 const MODE_COLORS: Record<string, string> = {
   scooter: '#9CCC65',
   bus: '#2196F3',
+  'car (gas)': '#E53935',
+  'car(gas)': '#E53935',
   car_gas: '#E53935',
+  'car (hybrid)': '#FB8C00',
+  'car(hybrid)': '#FB8C00',
   car_hybrid: '#FB8C00',
+  'car (ev)': '#8E24AA',
+  'car(ev)': '#8E24AA',
   car_ev: '#8E24AA',
   other: '#BDBDBD'
 }
 
-const ZERO_EMISSION_MODES = ['walk', 'bike']
+const ZERO_EMISSION_MODES = ['walk', 'bike', 'walking', 'biking', 'bicycle']
+
+// Normalize mode name for comparison (case-insensitive, handles variations)
+function normalizeModeForComparison(mode: string): string {
+  if (!mode) return ''
+  const normalized = mode.trim().toLowerCase()
+  
+  // Handle common variations
+  if (normalized.includes('walk')) return 'walk'
+  if (normalized.includes('bike') || normalized.includes('bicycle')) return 'bike'
+  
+  return normalized
+}
+
+// Check if a mode is zero-emission
+function isZeroEmissionMode(mode: string): boolean {
+  const normalized = normalizeModeForComparison(mode)
+  return ZERO_EMISSION_MODES.includes(normalized)
+}
+
+// Format mode labels for display
+function formatModeLabel(mode: string): string {
+  const modeMap: Record<string, string> = {
+    walk: 'Walking',
+    bike: 'Biking',
+    scooter: 'Scooter',
+    bus: 'Bus',
+    car_gas: 'Car (Gas)',
+    car_hybrid: 'Car (Hybrid)',
+    car_ev: 'Car (EV)',
+    other: 'Other'
+  }
+  const normalized = normalizeModeForComparison(mode)
+  return modeMap[normalized] || mode.charAt(0).toUpperCase() + mode.slice(1).replace(/_/g, ' ')
+}
+
 type SeriesPoint = { label: string; value: number }
 
 export default function Tracker() {
@@ -79,10 +120,13 @@ export default function Tracker() {
         if (modeRes.status === 'fulfilled') {
           const byModeObj = modeRes.value.by_mode_kg
           const filteredEntries = Object.entries(byModeObj)
-            .filter(([k, v]) => !ZERO_EMISSION_MODES.includes(k) && Number(v) > 0)
+            .filter(([k, v]) => !isZeroEmissionMode(k) && Number(v) > 0)
           const filteredTotal = filteredEntries.reduce((acc, [, v]) => acc + Number(v), 0)
           setTotal(filteredTotal)
-          setByMode(filteredEntries.map(([k, v]) => ({ label: k, value: Number(v) })))
+          setByMode(filteredEntries.map(([k, v]) => ({ 
+            label: formatModeLabel(k), 
+            value: Number(v) 
+          })))
           setEmissionsLoaded(true)
         }
 
@@ -110,16 +154,37 @@ export default function Tracker() {
     }
   }, [userEmail])
 
-  // zero-emission aggregation from prefetched commutes
+  // Calculate date range: from first day of previous month to today
+  const dateRange = useMemo(() => {
+    const today = new Date()
+    const currentMonth = today.getMonth()
+    const currentYear = today.getFullYear()
+    
+    // First day of previous month
+    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
+    const prevMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear
+    const firstDayPrevMonth = new Date(prevMonthYear, prevMonth, 1)
+    
+    // Today
+    const todayDate = new Date(currentYear, currentMonth, today.getDate())
+    
+    return {
+      from: firstDayPrevMonth.toISOString().slice(0, 10), // YYYY-MM-DD
+      to: todayDate.toISOString().slice(0, 10) // YYYY-MM-DD
+    }
+  }, [])
+
+  // zero-emission aggregation from prefetched commutes (filtered to previous month)
   const zeroDistance = useMemo(() => {
     let totalKm = 0
     const bucket: Record<string, number> = {}
 
     for (const r of commutes) {
-      if (!ZERO_EMISSION_MODES.includes(r.mode)) continue
+      // Use case-insensitive comparison
+      if (!isZeroEmissionMode(r.mode)) continue
 
-      // normalize to date-only so multiple trips on the same day are grouped
-      const d = (() => {
+      // Get date string
+      const commuteDate = (() => {
         try {
           return new Date(r.date).toISOString().slice(0, 10) // "YYYY-MM-DD"
         } catch {
@@ -127,11 +192,16 @@ export default function Tracker() {
         }
       })()
 
+      // Filter to only include dates from previous month onwards
+      if (commuteDate < dateRange.from || commuteDate > dateRange.to) {
+        continue
+      }
+
       const km = Number(r.distance_km || 0)
       if (!Number.isFinite(km) || km <= 0) continue
 
       totalKm += km
-      bucket[d] = (bucket[d] ?? 0) + km
+      bucket[commuteDate] = (bucket[commuteDate] ?? 0) + km
     }
 
     const series: SeriesPoint[] = Object.entries(bucket)
@@ -139,7 +209,7 @@ export default function Tracker() {
       .map(([label, value]) => ({ label, value: Number(value.toFixed(3)) }))
 
     return { totalKm: Number(totalKm.toFixed(3)), series }
-  }, [commutes])
+  }, [commutes, dateRange])
 
   // When data for the active view is loaded, wait for paint then hide overlay.
   useEffect(() => {
@@ -221,7 +291,9 @@ export default function Tracker() {
                           label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                         >
                           {byMode.map((entry, idx) => {
-                            const color = MODE_COLORS[entry.label] || MODE_COLORS.other
+                            // Normalize label for color lookup
+                            const normalizedLabel = entry.label.toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, '')
+                            const color = MODE_COLORS[normalizedLabel] || MODE_COLORS[entry.label] || MODE_COLORS.other
                             return <Cell key={`cell-${idx}`} fill={color} />
                           })}
                         </Pie>
@@ -263,7 +335,9 @@ export default function Tracker() {
                     <tbody>
                       {byMode.map((m, i) => {
                         const pct = total > 0 ? (m.value / total) * 100 : 0
-                        const color = MODE_COLORS[m.label] || MODE_COLORS.other
+                        // Get color based on normalized mode name
+                        const normalizedMode = m.label.toLowerCase().replace(/\s+/g, '_').replace(/[()]/g, '')
+                        const color = MODE_COLORS[normalizedMode] || MODE_COLORS.other
                         return (
                           <tr key={i} style={tableRow}>
                             <td style={{ ...tableCell, color, fontWeight: 600 }}>{m.label}</td>
@@ -295,19 +369,30 @@ export default function Tracker() {
                 <div style={summaryHint}>Walk + Bike distances</div>
               </div>
 
-              <div style={chartCard}>
-                <h3 style={chartTitle}>Zero-Emission Distance by Day</h3>
-                <div style={{ ...chartContainer, height: 360 }}>
-                  <ResponsiveContainer>
-                    <LineChart data={zeroDistance.series}>
-                      <XAxis dataKey="label" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="value" stroke="#2E7D32" strokeWidth={3} dot={{ fill: '#2E7D32', r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+              {zeroDistance.series.length > 0 ? (
+                <div style={chartCard}>
+                  <h3 style={chartTitle}>Zero-Emission Distance by Day</h3>
+                  <div style={{ ...chartContainer, height: 360 }}>
+                    <ResponsiveContainer>
+                      <LineChart data={zeroDistance.series}>
+                        <XAxis dataKey="label" />
+                        <YAxis />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="value" stroke="#2E7D32" strokeWidth={3} dot={{ fill: '#2E7D32', r: 4 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div style={chartCard}>
+                  <h3 style={chartTitle}>Zero-Emission Distance by Day</h3>
+                  <div style={emptyState}>
+                    <div style={emptyStateContent}>
+                      <p>No zero-emission commutes yet. Log some walks or bike rides to see your progress here!</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </>
